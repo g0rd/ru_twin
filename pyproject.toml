@@ -1,0 +1,23 @@
+[project]
+name = "ru_twin"
+version = "0.1.0"
+description = "Ru-twin using crewAI"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "crewai[tools]>=0.114.0,<1.0.0"
+]
+
+[project.scripts]
+ru_twin = "ru_twin.main:run"
+run_crew = "ru_twin.main:run"
+train = "ru_twin.main:train"
+replay = "ru_twin.main:replay"
+test = "ru_twin.main:test"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "crew"

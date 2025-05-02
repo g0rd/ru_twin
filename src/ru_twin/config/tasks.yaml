@@ -1,0 +1,459 @@
+# CrewAI Tasks Configuration
+
+# Global task settings
+global_settings:
+  default_timeout: 3600  # 1 hour in seconds
+  default_max_retries: 3
+  default_priority: "medium"
+
+# Task definitions
+tasks:
+  # Market Research Task
+  - id: "market_research"
+    name: "CPG Market Research"
+    description: "Research current market trends, competitor analysis, and consumer preferences in the CPG industry"
+    assigned_agents: 
+      - "CPG Researcher"
+    supporting_agents:
+      - "Writer"  # To format research findings
+      - "PR Strategist"  # Added for market visibility insights
+    priority: "high"
+    estimated_duration: 7200  # 2 hours
+    dependencies: []  # No dependencies
+    artifacts:
+      - name: "market_research_report"
+        type: "document"
+        format: "markdown"
+        description: "Comprehensive market research report"
+        required: true
+    task_inputs:
+      - name: "specific_product_category"
+        type: "string"
+        required: false
+        description: "Focus on a specific product category if provided"
+      - name: "geographic_focus"
+        type: "string"
+        default: "United States"
+        description: "Geographic market to focus on"
+      - name: "timeframe"
+        type: "string"
+        default: "current"
+        description: "Timeframe for market analysis (current, 6m, 1y, 5y)"
+
+  # Sales Strategy Development
+  - id: "sales_strategy"
+    name: "CPG Sales Strategy Development"
+    description: "Develop a comprehensive sales strategy based on market research"
+    assigned_agents:
+      - "CPG Salesperson"
+    supporting_agents:
+      - "CPG Researcher"
+      - "Writer"
+    priority: "high"
+    estimated_duration: 5400  # 1.5 hours
+    dependencies:
+      - "market_research"  # Depends on market research being completed
+    artifacts:
+      - name: "sales_strategy_document"
+        type: "document"
+        format: "markdown"
+        description: "Sales strategy document with tactical recommendations"
+        required: true
+      - name: "sales_pitch_deck"
+        type: "presentation"
+        format: "markdown"  # Will be formatted as a presentation
+        description: "Sales pitch deck based on the strategy"
+        required: false
+    task_inputs:
+      - name: "target_audience"
+        type: "string"
+        required: true
+        description: "Target audience for the sales strategy"
+      - name: "sales_channels"
+        type: "array"
+        default: ["direct", "distribution", "online"]
+        description: "Sales channels to focus on"
+
+  # Financial Planning
+  - id: "financial_planning"
+    name: "Financial Planning and Analysis"
+    description: "Develop financial projections and analysis based on market research and sales strategy"
+    assigned_agents:
+      - "CFO"
+    supporting_agents:
+      - "CPG Researcher"
+      - "CPG Salesperson"
+    priority: "medium"
+    estimated_duration: 7200  # 2 hours
+    dependencies:
+      - "market_research"
+      - "sales_strategy"
+    artifacts:
+      - name: "financial_projection"
+        type: "document"
+        format: "markdown"
+        description: "Financial projection document"
+        required: true
+      - name: "roi_analysis"
+        type: "spreadsheet"
+        format: "csv"
+        description: "ROI analysis for the sales strategy"
+        required: true
+    task_inputs:
+      - name: "budget_constraints"
+        type: "number"
+        required: false
+        description: "Budget constraints for implementation"
+      - name: "target_roi"
+        type: "number"
+        default: 20
+        description: "Target ROI percentage"
+
+  # Legal Review
+  - id: "legal_review"
+    name: "Legal Review and Risk Assessment"
+    description: "Review sales strategy and market approach for legal compliance and risk"
+    assigned_agents:
+      - "Legal Advisor"
+    supporting_agents: []
+    priority: "medium"
+    estimated_duration: 3600  # 1 hour
+    dependencies:
+      - "sales_strategy"
+    artifacts:
+      - name: "legal_risk_assessment"
+        type: "document"
+        format: "markdown"
+        description: "Legal risk assessment document"
+        required: true
+    task_inputs:
+      - name: "jurisdictions"
+        type: "array"
+        default: ["US"]
+        description: "Jurisdictions to consider for compliance"
+
+  # Implementation Plan
+  - id: "implementation_plan"
+    name: "Implementation Planning"
+    description: "Create a comprehensive implementation plan incorporating all aspects including technical architecture, development, PR, and business considerations"
+    assigned_agents:
+      - "Digital Twin"
+      - "Executive Assistant"
+    supporting_agents:
+      - "CPG Researcher"
+      - "CPG Salesperson"
+      - "CFO"
+      - "Legal Advisor"
+      - "Full Stack AI Developer"
+      - "PR Strategist"
+    priority: "high"
+    estimated_duration: 7200  # 2 hours
+    dependencies:
+      - "market_research"
+      - "sales_strategy"
+      - "financial_planning"
+      - "legal_review"
+      - "system_architecture"
+      - "pr_strategy"
+    artifacts:
+      - name: "implementation_plan"
+        type: "document"
+        format: "markdown"
+        description: "Comprehensive implementation plan"
+        required: true
+      - name: "timeline"
+        type: "document"
+        format: "markdown"
+        description: "Implementation timeline"
+        required: true
+      - name: "responsibility_matrix"
+        type: "document"
+        format: "markdown"
+        description: "RACI matrix for implementation"
+        required: true
+    task_inputs:
+      - name: "implementation_timeframe"
+        type: "string"
+        default: "3 months"
+        description: "Timeframe for implementation"
+      - name: "available_resources"
+        type: "object"
+        required: false
+        description: "Available resources for implementation"
+
+  # Progress Tracking and Accountability
+  - id: "progress_tracking"
+    name: "Progress Tracking and Accountability"
+    description: "Set up system to track implementation progress and ensure accountability"
+    assigned_agents:
+      - "Accountability Buddy"
+    supporting_agents:
+      - "Executive Assistant"
+    priority: "medium"
+    estimated_duration: 3600  # 1 hour
+    dependencies:
+      - "implementation_plan"
+    artifacts:
+      - name: "accountability_framework"
+        type: "document"
+        format: "markdown"
+        description: "Accountability framework document"
+        required: true
+      - name: "progress_dashboard"
+        type: "document"
+        format: "markdown"
+        description: "Progress tracking dashboard specification"
+        required: true
+    task_inputs:
+      - name: "key_milestones"
+        type: "array"
+        required: false
+        description: "Key milestones to track"
+      - name: "reporting_frequency"
+        type: "string"
+        default: "weekly"
+        description: "Frequency of progress reporting"
+
+  # System Architecture Design
+  - id: "system_architecture"
+    name: "System Architecture Design"
+    description: "Design and document system architecture for new features or applications"
+    assigned_agents:
+      - "Full Stack AI Developer"
+    supporting_agents:
+      - "Digital Twin"
+    priority: "high"
+    estimated_duration: 7200  # 2 hours
+    artifacts:
+      - name: "architecture_document"
+        type: "document"
+        format: "markdown"
+        description: "System architecture documentation"
+        required: true
+      - name: "technical_specs"
+        type: "document"
+        format: "markdown"
+        description: "Technical specifications"
+        required: true
+
+  # Development and Implementation
+  - id: "development_implementation"
+    name: "Development and Implementation"
+    description: "Implement designed features and integrate with existing systems"
+    assigned_agents:
+      - "Full Stack AI Developer"
+    priority: "high"
+    estimated_duration: 14400  # 4 hours
+    dependencies:
+      - "system_architecture"
+    artifacts:
+      - name: "code_repository"
+        type: "code"
+        format: "git"
+        description: "Implemented code"
+        required: true
+      - name: "deployment_guide"
+        type: "document"
+        format: "markdown"
+        description: "Deployment and integration guide"
+        required: true
+
+  # PR Strategy Development
+  - id: "pr_strategy"
+    name: "PR Strategy Development"
+    description: "Develop comprehensive PR strategy and content plan"
+    assigned_agents:
+      - "PR Strategist"
+    supporting_agents:
+      - "Writer"
+    priority: "high"
+    estimated_duration: 5400  # 1.5 hours
+    artifacts:
+      - name: "pr_strategy_doc"
+        type: "document"
+        format: "markdown"
+        description: "PR strategy document"
+        required: true
+      - name: "content_calendar"
+        type: "document"
+        format: "markdown"
+        description: "Content calendar and plan"
+        required: true
+
+  # Media Outreach and Relationship Building
+  - id: "media_outreach"
+    name: "Media Outreach and Relationship Building"
+    description: "Execute PR strategy through media outreach and relationship building"
+    assigned_agents:
+      - "PR Strategist"
+    priority: "medium"
+    estimated_duration: 7200  # 2 hours
+    dependencies:
+      - "pr_strategy"
+    artifacts:
+      - name: "media_list"
+        type: "document"
+        format: "markdown"
+        description: "Curated media list with contact details"
+        required: true
+      - name: "pitch_materials"
+        type: "document"
+        format: "markdown"
+        description: "Pitch materials and press releases"
+        required: true
+
+# Workflows connect multiple tasks for specific objectives
+workflows:
+  - id: "cpg_market_entry"
+    name: "CPG Market Entry Strategy"
+    description: "End-to-end workflow for researching, planning, and implementing a CPG market entry strategy"
+    tasks:
+      - "market_research"
+      - "sales_strategy"
+      - "financial_planning"
+      - "legal_review"
+      - "implementation_plan"
+      - "progress_tracking"
+    coordinator: "Digital Twin"
+    inputs:
+      - name: "product_category"
+        mapping: "market_research.specific_product_category"
+      - name: "target_markets"
+        mapping: ["market_research.geographic_focus", "legal_review.jurisdictions"]
+      - name: "budget"
+        mapping: "financial_planning.budget_constraints"
+      - name: "target_roi"
+        mapping: "financial_planning.target_roi"
+      - name: "implementation_timeframe"
+        mapping: "implementation_plan.implementation_timeframe"
+    outputs:
+      - name: "market_research_report"
+        source: "market_research.market_research_report"
+      - name: "sales_strategy_document"
+        source: "sales_strategy.sales_strategy_document"
+      - name: "financial_projection"
+        source: "financial_planning.financial_projection"
+      - name: "implementation_plan"
+        source: "implementation_plan.implementation_plan"
+  
+  - id: "cpg_product_launch"
+    name: "CPG Product Launch"
+    description: "Workflow for planning and executing a new CPG product launch"
+    tasks:
+      - "market_research"
+      - "sales_strategy"
+      - "financial_planning"
+      - "implementation_plan"
+      - "progress_tracking"
+    coordinator: "Digital Twin"
+    # Additional configuration similar to above workflow...
+
+  - id: "technical_product_launch"
+    name: "Technical Product Launch with PR"
+    description: "End-to-end workflow for developing and launching a technical product with integrated PR strategy"
+    tasks:
+      - "market_research"
+      - "system_architecture"
+      - "development_implementation"
+      - "pr_strategy"
+      - "media_outreach"
+      - "implementation_plan"
+      - "progress_tracking"
+    coordinator: "Digital Twin"
+    inputs:
+      - name: "technical_requirements"
+        mapping: "system_architecture.requirements"
+      - name: "target_audience"
+        mapping: ["market_research.target_audience", "pr_strategy.target_audience"]
+      - name: "development_timeline"
+        mapping: "implementation_plan.implementation_timeframe"
+    outputs:
+      - name: "technical_documentation"
+        source: "system_architecture.architecture_document"
+      - name: "implemented_features"
+        source: "development_implementation.code_repository"
+      - name: "pr_launch_plan"
+        source: "pr_strategy.pr_strategy_doc"
+      - name: "media_coverage_report"
+        source: "media_outreach.media_list"
+
+  - id: "digital_transformation"
+    name: "Digital Transformation Initiative"
+    description: "Comprehensive workflow for implementing digital transformation with technical development and public relations"
+    tasks:
+      - "market_research"
+      - "system_architecture"
+      - "development_implementation"
+      - "pr_strategy"
+      - "financial_planning"
+      - "legal_review"
+      - "implementation_plan"
+      - "progress_tracking"
+    coordinator: "Digital Twin"
+    dependencies:
+      task_order:
+        - ["market_research", "system_architecture"]
+        - ["system_architecture", "development_implementation"]
+        - ["market_research", "pr_strategy"]
+        - ["financial_planning", "implementation_plan"]
+    assigned_agents:
+      primary:
+        - "Digital Twin"
+        - "Full Stack AI Developer"
+      supporting:
+        - "PR Strategist"
+        - "CFO"
+        - "Legal Advisor"
+    artifacts:
+      required:
+        - "architecture_document"
+        - "code_repository"
+        - "pr_strategy_doc"
+        - "financial_projection"
+      optional:
+        - "media_coverage_report"
+        - "user_feedback"
+
+# Hooks for external integrations
+hooks:
+  - event: "workflow_start"
+    action:
+      type: "notification"
+      target: "email"
+      config:
+        recipient: "${USER_EMAIL}"
+        subject: "Workflow {workflow_name} Started"
+  
+  - event: "task_complete"
+    action:
+      type: "notification"
+      target: "email"
+      config:
+        recipient: "${USER_EMAIL}"
+        subject: "Task {task_name} Completed"
+        include_artifacts: true
+  
+  - event: "artifact_created"
+    action:
+      type: "storage"
+      target: "file_storage"
+      config:
+        path: "artifacts/{workflow_id}/{artifact_name}"
+
+  - event: "code_deployment"
+    action:
+      type: "notification"
+      target: "email"
+      config:
+        recipient: ["${USER_EMAIL}", "${TECH_TEAM_EMAIL}"]
+        subject: "New Code Deployment - {deployment_name}"
+        include_artifacts: true
+
+  - event: "pr_milestone"
+    action:
+      type: "notification"
+      target: "email"
+      config:
+        recipient: ["${USER_EMAIL}", "${PR_TEAM_EMAIL}"]
+        subject: "PR Milestone Achieved - {milestone_name}"
+        include_artifacts: true
