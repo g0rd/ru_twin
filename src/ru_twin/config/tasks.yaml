@@ -302,6 +302,46 @@ tasks:
         description: "Pitch materials and press releases"
         required: true
 
+  # Shopify Tasks
+  - id: "shopify_search_docs"
+    name: "Shopify Dev Docs Search"
+    description: "Search Shopify developer documentation for relevant information."
+    assigned_agents:
+      - "CPG Researcher"
+      - "Goose Coding Agent"
+    priority: "medium"
+    estimated_duration: 1800
+    artifacts:
+      - name: "shopify_docs_results"
+        type: "document"
+        format: "markdown"
+        description: "Relevant documentation search results"
+        required: true
+    task_inputs:
+      - name: "query"
+        type: "string"
+        required: true
+        description: "Search query for Shopify docs"
+
+  - id: "shopify_admin_graphql"
+    name: "Shopify Admin GraphQL Query"
+    description: "Run a GraphQL query against the Shopify Admin API."
+    assigned_agents:
+      - "Goose Coding Agent"
+    priority: "high"
+    estimated_duration: 1800
+    artifacts:
+      - name: "shopify_graphql_results"
+        type: "document"
+        format: "json"
+        description: "GraphQL query results"
+        required: true
+    task_inputs:
+      - name: "graphql_query"
+        type: "string"
+        required: true
+        description: "GraphQL query to run"
+
 # Workflows connect multiple tasks for specific objectives
 workflows:
   - id: "cpg_market_entry"

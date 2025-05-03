@@ -12,6 +12,8 @@ from .mcp_clients.gumloop_google_sheets import GumloopGoogleSheetsMCP
 from .mcp_clients.gumloop_gmail import GumloopGmailMCP
 from .mcp_clients.gumloop_slack import GumloopSlackMCP
 from .mcp_clients.senso import SensoMCP
+from .mcp_clients.goose import GooseMCP
+from .mcp_clients.shopify_mcp import ShopifyMCPClient
 
 class ToolRegistry:
     """Registry for managing custom tools."""
@@ -40,11 +42,18 @@ class ToolRegistry:
             "slack_send_message": GumloopSlackMCP(base_url="https://api.gumloop.com", api_key="YOUR_KEY").send_message,
         }
         self.senso = SensoMCP(api_key="YOUR_SENSO_API_KEY")
+        self.goose = GooseMCP(goose_cli_path="goose")
+        self.shopify_mcp = ShopifyMCPClient(base_url="http://shopify_mcp:5005")
         self.tools.update({
             "senso_upload_content": self.senso.upload_content,
             "senso_list_content": self.senso.list_content,
             "senso_search": self.senso.search,
             "senso_generate": self.senso.generate,
+            "goose_code": self.goose.run_prompt,
+            "goose_project": self.goose.create_project,
+            "shopify_search_dev_docs": self.shopify_mcp.search_dev_docs,
+            "shopify_introspect_admin_schema": self.shopify_mcp.introspect_admin_schema,
+            "shopify_admin_graphql": self.shopify_mcp.shopify_admin_graphql,
         })
     
     def get_tool(self, tool_name: str) -> callable:
@@ -82,11 +91,6 @@ class ToolRegistry:
             "Legal Advisor": [
                 "legal_analysis",
                 "compliance_checker"
-            ],
-            "Full Stack AI Developer": [
-                "code_generator",
-                "architecture_designer",
-                "api_designer"
             ],
             "PR Strategist": [
                 "media_monitor",

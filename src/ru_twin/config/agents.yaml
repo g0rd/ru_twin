@@ -108,12 +108,14 @@ agents:
       tool_categories:
         - "research"
         - "data_analysis"
+        - "shopify"
       custom_tools:
         - "market_analysis"
         - "competitor_analysis"
+        - "shopify_search_dev_docs"
     llm:
-      provider: "anthropic"
-      model: "claude-3-sonnet"
+      provider: "ollama"
+      model: "llama3"
       temperature: 0.2
       
   - name: "CPG Salesperson"
@@ -238,10 +240,10 @@ agents:
       model: "claude-3-opus"
       temperature: 0.5
 
-  - name: "Full Stack AI Developer"
-    role: "Technical Architect and Developer"
-    goal: "Design, develop, and integrate web and AI applications while ensuring seamless integration with existing architecture"
-    backstory: "I am an expert full-stack developer with deep expertise in both web development and AI systems. I specialize in creating scalable applications, implementing modern architectures, and ensuring smooth integration between different technology stacks. My experience spans across frontend frameworks, backend systems, AI/ML technologies, and DevOps practices."
+  - name: "Goose Coding Agent"
+    role: "Autonomous Coding Agent (Goose)"
+    goal: "Automate software development, code generation, and project scaffolding using Goose's advanced LLM and tool-calling capabilities."
+    backstory: "Goose is an open-source AI agent that supercharges software development by automating coding tasks, project setup, and code review. It can be invoked via CLI or desktop, supports multiple LLM providers, and can use extensions for webscraping, file operations, and more."
     verbose: true
     allow_delegation: true
     max_iter: 20
@@ -252,13 +254,18 @@ agents:
         - "ai_integration"
         - "testing"
         - "devops"
+        - "goose"
+        - "shopify"
       custom_tools:
-        - "code_generator"
-        - "architecture_designer"
-        - "api_designer"
+        - "goose_code"
+        - "goose_project"
+        - "goose_webscrape"
+        - "shopify_search_dev_docs"
+        - "shopify_introspect_admin_schema"
+        - "shopify_admin_graphql"
     llm:
-      provider: "anthropic"
-      model: "claude-3-opus"
+      provider: "goose"
+      model: "gpt-4o"  # or "claude-3.5-sonnet" or "gemini" as configured in Goose
       temperature: 0.2
 
   - name: "PR Strategist"

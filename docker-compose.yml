@@ -1,8 +1,7 @@
-
-version: '3'
+version: '3.8'
 
 services:
-  # Local LLM server
+  # Local LLM server (Ollama)
   ollama:
     image: ollama/ollama
     ports:
@@ -12,10 +11,10 @@ services:
     deploy:
       resources:
         limits:
-          memory: 8G
+          memory: 8git branch -M mainG
     restart: unless-stopped
 
-  # Database
+  # Database (Postgres)
   postgres:
     image: postgres:15
     environment:
@@ -28,7 +27,7 @@ services:
       - "5432:5432"
     restart: unless-stopped
 
-  # Vector database
+  # Vector database (Chroma)
   chroma:
     image: ghcr.io/chroma-core/chroma:latest
     volumes:
@@ -37,7 +36,7 @@ services:
       - "8000:8000"
     restart: unless-stopped
 
-  # Object storage (S3 compatible)
+  # Object storage (MinIO, S3 compatible)
   minio:
     image: minio/minio
     command: server /data --console-address ":9001"
@@ -51,7 +50,15 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
     restart: unless-stopped
 
-  # Search engine
+  # Redis for caching
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  # Search engine (optional, for web search)
   searxng:
     image: searxng/searxng
     ports:
@@ -63,18 +70,22 @@ services:
   # CrewAI application
   crewai:
     build: ./
+    container_name: ru_twin_app
     depends_on:
       - postgres
       - ollama
       - chroma
       - minio
+      - redis
       - searxng
+    env_file: .env
     environment:
       DB_CONNECTION_STRING: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       VECTOR_DB_HOST: chroma
       MINIO_HOST: minio
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      REDIS_URL: redis://redis:6379/0
       SEARXNG_HOST: searxng
       OLLAMA_HOST: ollama
     volumes:
@@ -84,9 +95,20 @@ services:
       - "3000:3000"
     restart: unless-stopped
 
+  shopify_mcp:
+    image: node:20
+    container_name: shopify_mcp
+    working_dir: /app
+    command: npx -y @shopify/dev-mcp@latest
+    ports:
+      - "5005:5005"  # Expose the MCP server port (adjust if needed)
+    volumes:
+      - ./shopify_mcp_data:/app
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   chroma_data:
   minio_data:
   ollama_models:
-  searxng_data:
+  searxng_data: 
