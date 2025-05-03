@@ -1,54 +1,134 @@
-# RuTwin Crew
 
-Welcome to the RuTwin Crew project, powered by [crewAI](https://crewai.com). This template is designed to help you set up a multi-agent AI system with ease, leveraging the powerful and flexible framework provided by crewAI. Our goal is to enable your agents to collaborate effectively on complex tasks, maximizing their collective intelligence and capabilities.
+- **Agents**: YAML-configured, each with specific LLM, tools, and goals.
+- **MCP**: Handles all tool invocations, rate limiting, logging, and access.
+- **External MCPs**: Gumloop (Google, Slack, Web), Shopify, Senso, Goose.
+- **Storage**: MinIO (S3), Chroma (vector), Postgres (relational), Redis (cache).
 
-## Installation
+---
 
-Ensure you have Python >=3.10 <3.13 installed on your system. This project uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
+## Getting Started
 
-First, if you haven't already, install uv:
-
-```bash
-pip install uv
-```
-
-Next, navigate to your project directory and install the dependencies:
-
-(Optional) Lock the dependencies and install them by using the CLI command:
-```bash
-crewai install
-```
-### Customizing
-
-**Add your `OPENAI_API_KEY` into the `.env` file**
-
-- Modify `src/ru_twin/config/agents.yaml` to define your agents
-- Modify `src/ru_twin/config/tasks.yaml` to define your tasks
-- Modify `src/ru_twin/crew.py` to add your own logic, tools and specific args
-- Modify `src/ru_twin/main.py` to add custom inputs for your agents and tasks
-
-## Running the Project
-
-To kickstart your crew of AI agents and begin task execution, run this from the root folder of your project:
+### 1. Clone the Repository
 
 ```bash
-$ crewai run
+git clone https://github.com/yourusername/ru_twin.git
+cd ru_twin
 ```
 
-This command initializes the Ru-twin Crew, assembling the agents and assigning them tasks as defined in your configuration.
+### 2. Configure Environment
 
-This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
+Copy `.env.example` to `.env` and fill in all required API keys and secrets (see below).
 
-## Understanding Your Crew
+### 3. Build and Run with Docker Compose
 
-The Ru-twin Crew is composed of multiple AI agents, each with unique roles, goals, and tools. These agents collaborate on a series of tasks, defined in `config/tasks.yaml`, leveraging their collective skills to achieve complex objectives. The `config/agents.yaml` file outlines the capabilities and configurations of each agent in your crew.
+```bash
+docker compose up --build
+```
 
-## Support
+This will start:
+- Ollama (LLM server)
+- Postgres (DB)
+- Chroma (vector DB)
+- MinIO (object storage)
+- Redis (cache)
+- SearxNG (optional search)
+- CrewAI app
+- Shopify MCP server
 
-For support, questions, or feedback regarding the RuTwin Crew or crewAI.
-- Visit our [documentation](https://docs.crewai.com)
-- Reach out to us through our [GitHub repository](https://github.com/joaomdmoura/crewai)
-- [Join our Discord](https://discord.com/invite/X4JWnZnxPb)
-- [Chat with our docs](https://chatg.pt/DWjSBZn)
+### 4. Add API Keys
 
-Let's create wonders together with the power and simplicity of crewAI.
+Edit your `.env` file with the following (see `.env.example` for all required keys):
+
+- `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`
+- `PINECONE_API_KEY`
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+- `SENSO_API_KEY`
+- `GUMLOOP_API_KEY`
+- `VAPI_API_KEY`
+- `SHOPIFY_API_KEY`, etc.
+
+### 5. Access the App
+
+- Main app: [http://localhost:3000](http://localhost:3000)
+- MinIO console: [http://localhost:9001](http://localhost:9001)
+- SearxNG: [http://localhost:8080](http://localhost:8080)
+- Shopify MCP: [http://localhost:5005](http://localhost:5005)
+
+---
+
+## Agents & Tasks
+
+- **Digital Twin**: Coordinator, final decision-maker (Claude-3 Opus).
+- **CPG Researcher**: Market/competitor research (Llama-3).
+- **CPG Salesperson**: Sales strategy (Claude-3 Sonnet).
+- **CFO**: Financial planning (Claude-3 Opus).
+- **Legal Advisor**: Compliance/risk (Claude-3 Opus).
+- **PR Strategist**: PR/content/media (Claude-3 Opus).
+- **Goose Coding Agent**: Automated coding/dev (Goose LLM).
+- **Voice Assistant**: Voice/phone escalation (Vapi, Claude-3 Sonnet).
+- **Executive Assistant, Accountability Buddy, Writer**: Support roles.
+
+Tasks and workflows are defined in `src/ru_twin/config/tasks.yaml`.
+
+---
+
+## Integrations
+
+- **Goose**: Autonomous coding, project scaffolding, code review.
+- **Shopify MCP**: Dev docs search, admin GraphQL, schema introspection.
+- **Gumloop**: Google Sheets, Gmail, Slack, web scraping.
+- **Senso**: Persistent memory and knowledge base.
+- **Vapi**: Voice/phone call management.
+
+---
+
+## Storage & Memory
+
+- **MinIO**: S3-compatible object storage (local, with cloud backup).
+- **Chroma**: Vector DB for semantic memory.
+- **Postgres**: Structured data.
+- **Redis**: Caching layer.
+
+---
+
+## Deployment
+
+- Designed for a mid-range VPS ($20-50/mo).
+- All services orchestrated via Docker Compose.
+- Easily extensible for new agents, tools, or integrations.
+
+---
+
+## Security
+
+- All secrets in `.env` (never commit this file).
+- Access control and rate limiting via MCP.
+- Encrypted storage and regular backups.
+
+---
+
+## Contributing
+
+1. Fork and clone the repo.
+2. Add new agents/tools in `src/ru_twin/config/agents.yaml` and `src/ru_twin/tools/`.
+3. Add new MCP clients in `src/ru_twin/mcp_clients/`.
+4. Update `docker-compose.yml` if new services are needed.
+5. Submit a PR!
+
+---
+
+## License
+
+MIT
+
+---
+
+## Acknowledgements
+
+- [CrewAI](https://github.com/joaomdmoura/crewai)
+- [Goose](https://block.github.io/goose/)
+- [Shopify Dev MCP](https://github.com/Shopify/dev-mcp)
+- [Gumloop](https://docs.gumloop.com/)
+- [Senso](https://docs.senso.ai/)
+- [Vapi](https://docs.vapi.ai/)

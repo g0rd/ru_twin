@@ -1,0 +1,239 @@
+# Shopify Tasks Configuration
+# This file contains task definitions for Shopify-related operations
+# including product analytics, SEO optimization, and inventory management
+
+# GraphQL API Documentation:
+# --------------------------
+# These tasks use Shopify's GraphQL Admin API (2025-04) for all operations.
+# The GraphQL API provides several advantages over REST:
+#   - More efficient data fetching (request only what you need)
+#   - Single endpoint for all operations
+#   - Strong typing and schema validation
+#   - Better performance through reduced payload size
+#
+# API Reference: https://shopify.dev/docs/api/admin-graphql
+# Authentication: All requests require X-Shopify-Access-Token header
+# Rate Limits: GraphQL API uses calculated query costs (points-based system)
+#
+# Global ID Format: All Shopify resources use the format gid://shopify/Resource/ID
+# Example: gid://shopify/Product/12345
+
+shopify_tasks:
+  # Product Performance Analytics Tasks
+  analyze_product_sales:
+    name: "Analyze Product Sales Performance"
+    description: "Analyze sales data for all products using GraphQL queries to identify trends, seasonality, and performance metrics."
+    expected_output: "Comprehensive sales performance report with trend analysis and recommendations."
+    required_tools:
+      - "analyze_product_sales"
+      - "data_visualization"
+    dependencies: []
+    agent: "data_analyst"
+    priority: "high"
+    parameters:
+      time_period: "last_30_days"
+      metrics:
+        - "revenue"
+        - "units_sold"
+        - "profit_margin"
+        - "conversion_rate"
+      graphql_cost_estimate: 500  # Estimated cost points for this query
+
+  identify_product_performance_gaps:
+    name: "Identify Product Performance Gaps"
+    description: "Compare product performance against benchmarks using GraphQL data and identify underperforming products."
+    expected_output: "List of underperforming products with analysis of potential causes."
+    required_tools:
+      - "identify_product_performance_gaps"
+      - "statistical_testing"
+    dependencies:
+      - "analyze_product_sales"
+    agent: "data_analyst"
+    priority: "medium"
+    parameters:
+      benchmark_type: "category_average"
+      performance_threshold: 0.75
+      graphql_cost_estimate: 300  # Estimated cost points for this query
+
+  customer_product_interaction_analysis:
+    name: "Analyze Customer Product Interactions"
+    description: "Analyze how customers interact with products including views, add-to-carts, and purchase completion rates using GraphQL data."
+    expected_output: "Customer journey map for products with conversion funnel analysis."
+    required_tools:
+      - "analyze_customer_product_interactions"
+      - "funnel_analysis"
+    dependencies: []
+    agent: "marketing_specialist"
+    priority: "medium"
+    parameters:
+      track_events:
+        - "product_view"
+        - "add_to_cart"
+        - "checkout_initiation"
+        - "purchase_completion"
+      graphql_cost_estimate: 400  # Estimated cost points for this query
+
+  generate_product_performance_dashboard:
+    name: "Generate Product Performance Dashboard"
+    description: "Create a visual dashboard summarizing key product performance metrics from GraphQL data for executive review."
+    expected_output: "Interactive dashboard with key performance indicators and actionable insights."
+    required_tools:
+      - "generate_product_performance_dashboard"
+      - "data_visualization"
+    dependencies:
+      - "analyze_product_sales"
+      - "identify_product_performance_gaps"
+      - "customer_product_interaction_analysis"
+    agent: "data_analyst"
+    priority: "high"
+    parameters:
+      dashboard_format: "interactive"
+      refresh_frequency: "weekly"
+      include_metrics:
+        - "revenue"
+        - "units_sold"
+        - "profit_margin"
+        - "conversion_rate"
+
+  # SEO Optimization Tasks
+  seo_product_listing_audit:
+    name: "Audit Product Listings for SEO"
+    description: "Analyze product listings for SEO best practices including titles, descriptions, and metadata using GraphQL queries."
+    expected_output: "Comprehensive audit report with SEO score for each product and specific improvement recommendations."
+    required_tools:
+      - "audit_product_listings_for_seo"
+      - "content_evaluation"
+    dependencies: []
+    agent: "seo_specialist"
+    priority: "high"
+    parameters:
+      audit_factors:
+        - "title_optimization"
+        - "description_quality"
+        - "keyword_usage"
+        - "image_alt_text"
+        - "metadata_completeness"
+      graphql_cost_estimate: 250  # Estimated cost points for this query
+
+  generate_seo_product_descriptions:
+    name: "Generate SEO-Optimized Product Descriptions"
+    description: "Create or optimize product descriptions with relevant keywords while maintaining engaging content, using GraphQL to fetch and update product data."
+    expected_output: "SEO-optimized product descriptions ready for implementation via GraphQL mutations."
+    required_tools:
+      - "generate_seo_product_descriptions"
+      - "keyword_optimization"
+    dependencies:
+      - "seo_product_listing_audit"
+    agent: "content_specialist"
+    priority: "medium"
+    parameters:
+      target_word_count: 150
+      keyword_density: 2.0
+      tone: "professional"
+      graphql_cost_estimate: 200  # Estimated cost points for this query
+
+  keyword_performance_analysis:
+    name: "Analyze Keyword Performance"
+    description: "Track and analyze keyword rankings and performance for product pages using data from GraphQL and external sources."
+    expected_output: "Keyword performance report with ranking changes and competition analysis."
+    required_tools:
+      - "analyze_keyword_performance"
+      - "competitor_analysis"
+    dependencies: []
+    agent: "seo_specialist"
+    priority: "medium"
+    parameters:
+      tracking_frequency: "weekly"
+      competitor_comparison: true
+      graphql_cost_estimate: 150  # Estimated cost points for this query
+
+  improve_product_search_rankings:
+    name: "Improve Product Search Rankings"
+    description: "Implement strategies to improve product visibility in both on-site search and external search engines using GraphQL mutations."
+    expected_output: "Implementation plan with specific actions to improve search rankings."
+    required_tools:
+      - "improve_product_search_rankings"
+      - "search_optimization"
+    dependencies:
+      - "keyword_performance_analysis"
+      - "seo_product_listing_audit"
+    agent: "seo_specialist"
+    priority: "high"
+    parameters:
+      target_improvement: "10%"
+      focus_areas:
+        - "on_site_search"
+        - "google_shopping"
+        - "organic_search"
+      graphql_cost_estimate: 350  # Estimated cost points for this query
+
+  # Inventory Management Tasks
+  monitor_inventory_levels:
+    name: "Monitor Inventory Levels"
+    description: "Track current inventory levels across all products and identify items approaching reorder points using GraphQL inventory queries."
+    expected_output: "Inventory status report with alerts for low-stock items."
+    required_tools:
+      - "monitor_inventory_levels"
+      - "alert_generation"
+    dependencies: []
+    agent: "inventory_manager"
+    priority: "critical"
+    parameters:
+      check_frequency: "daily"
+      low_stock_threshold: 0.2
+      graphql_cost_estimate: 300  # Estimated cost points for this query
+
+  predict_inventory_needs:
+    name: "Predict Future Inventory Needs"
+    description: "Forecast future inventory requirements based on historical sales data from GraphQL and upcoming promotions."
+    expected_output: "Inventory forecast report with predicted demand by product and timeframe."
+    required_tools:
+      - "predict_inventory_needs"
+      - "trend_analysis"
+    dependencies:
+      - "analyze_product_sales"
+      - "monitor_inventory_levels"
+    agent: "data_analyst"
+    priority: "high"
+    parameters:
+      forecast_horizon: "90_days"
+      confidence_interval: 0.9
+      include_seasonality: true
+      graphql_cost_estimate: 450  # Estimated cost points for this query
+
+  generate_restock_recommendations:
+    name: "Generate Restock Recommendations"
+    description: "Create actionable restock recommendations based on GraphQL inventory data, predicted demand, and supplier lead times."
+    expected_output: "Prioritized restock order recommendations with quantities and timing."
+    required_tools:
+      - "generate_restock_recommendations"
+      - "supply_chain_analysis"
+    dependencies:
+      - "monitor_inventory_levels"
+      - "predict_inventory_needs"
+    agent: "inventory_manager"
+    priority: "high"
+    parameters:
+      consider_lead_time: true
+      optimize_for: "minimal_stockouts"
+      include_cost_analysis: true
+      graphql_cost_estimate: 200  # Estimated cost points for this query
+
+  analyze_inventory_turnover:
+    name: "Analyze Inventory Turnover Rates"
+    description: "Calculate and analyze inventory turnover rates using GraphQL data to identify slow-moving products and excess inventory."
+    expected_output: "Inventory efficiency report with turnover metrics and recommendations for improvement."
+    required_tools:
+      - "analyze_inventory_turnover"
+      - "financial_analysis"
+    dependencies:
+      - "monitor_inventory_levels"
+    agent: "inventory_manager"
+    priority: "medium"
+    parameters:
+      analysis_period: "quarterly"
+      categorize_by:
+        - "product_category"
+        - "price_point"
+        - "supplier"
+      graphql_cost_estimate: 350  # Estimated cost points for this query

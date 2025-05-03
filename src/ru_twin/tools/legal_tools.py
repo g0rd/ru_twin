@@ -9,8 +9,8 @@ class LegalAnalysisInput(BaseModel):
     jurisdiction: str = Field(default="US", description="Legal jurisdiction")
 
 class LegalAnalysis(BaseTool):
-    name: str = "LegalAnalysis"
-    description: "Analyze legal documents and provide insights"
+    name = "LegalAnalysis"
+    description = "Analyze legal documents and provide insights"
     args_schema: Type[BaseModel] = LegalAnalysisInput
 
     def _run(self, document: str, focus_areas: List[str], jurisdiction: str) -> str:
@@ -34,8 +34,8 @@ class ComplianceCheckerInput(BaseModel):
     region: str = Field(default="US", description="Geographic region")
 
 class ComplianceChecker(BaseTool):
-    name: str = "ComplianceChecker"
-    description: "Check compliance with legal and regulatory requirements"
+    name = "ComplianceChecker"
+    description = "Check compliance with legal and regulatory requirements"
     args_schema: Type[BaseModel] = ComplianceCheckerInput
 
     def _run(self, requirements: List[str], context: str, region: str) -> str:
