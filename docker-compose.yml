@@ -112,3 +112,61 @@ volumes:
   minio_data:
   ollama_models:
   searxng_data: 
+
+
+#   version: '3.8'
+
+# services:
+#   # Main application service
+#   app:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     container_name: ru_twin_app
+#     restart: unless-stopped
+#     volumes:
+#       - ./src:/app/src
+#       - ./knowledge:/app/knowledge
+#     env_file:
+#       - .env
+#     ports:
+#       - "8000:8000"  # FastAPI server
+#     depends_on:
+#       - phoenix
+#     environment:
+#       - OTEL_EXPORTER_OTLP_ENDPOINT=http://phoenix:4317
+#       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+#       - OTEL_SERVICE_NAME=ru_twin
+#     networks:
+#       - ru_twin_network
+
+#   # Arize Phoenix observability service
+#   phoenix:
+#     image: arizepublic/phoenix:latest
+#     container_name: ru_twin_phoenix
+#     restart: unless-stopped
+#     ports:
+#       - "6006:6006"  # Phoenix UI
+#       - "4317:4317"  # OTLP gRPC endpoint
+#     volumes:
+#       - ./phoenix-data:/phoenix/data  # Persist data
+#     environment:
+#       - PHOENIX_PORT=6006
+#       - PHOENIX_HOST=0.0.0.0
+#       - PHOENIX_DATA_PATH=/phoenix/data
+#     networks:
+#       - ru_twin_network
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:6006/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 10s
+
+# networks:
+#   ru_twin_network:
+#     driver: bridge
+
+# volumes:
+#   phoenix-data:
+#     driver: local

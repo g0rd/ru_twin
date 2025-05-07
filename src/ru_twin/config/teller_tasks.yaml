@@ -1,0 +1,262 @@
+# Teller Tasks Configuration
+# This file contains task definitions for financial operations
+# using the Teller API for account access, transaction analysis,
+# balance retrieval, and cash flow analysis
+
+# Teller API Documentation:
+# --------------------------
+# These tasks use the Teller API for accessing financial data.
+# Teller provides secure access to banking data through a REST API.
+# Key features include:
+#   - Account and balance information
+#   - Transaction history
+#   - Simple authentication model
+#
+# API Reference: https://teller.io/docs/api
+# Authentication: All requests require an access token
+# Environment: Tasks can run in sandbox or production environments
+
+teller_tasks:
+  # Account Management Tasks
+  get_account_overview:
+    name: "Get Financial Account Overview"
+    description: "Retrieve and summarize all financial accounts connected through Teller."
+    expected_output: "Comprehensive overview of all accounts with types and institutions."
+    required_tools:
+      - "get_accounts"
+    dependencies: []
+    agent: "financial_assistant"
+    priority: "high"
+    parameters:
+      include_balances: true
+
+  get_account_details:
+    name: "Get Detailed Account Information"
+    description: "Retrieve detailed information for a specific account including recent transactions."
+    expected_output: "Detailed account information with balance and recent activity."
+    required_tools:
+      - "get_account_details"
+    dependencies:
+      - "get_account_overview"
+    agent: "financial_assistant"
+    priority: "medium"
+    parameters:
+      account_id: "account_id_placeholder"
+      include_balance: true
+
+  get_account_summary:
+    name: "Generate Account Summary"
+    description: "Create a summary of all accounts with total balances by account type."
+    expected_output: "Account summary with totals by type and overall financial position."
+    required_tools:
+      - "get_account_summary"
+    dependencies:
+      - "get_account_overview"
+    agent: "financial_analyst"
+    priority: "high"
+    parameters:
+      group_by_type: true
+
+  # Balance Retrieval Tasks
+  get_account_balance:
+    name: "Get Account Balance"
+    description: "Retrieve current balance information for a specific account."
+    expected_output: "Current ledger and available balances for the account."
+    required_tools:
+      - "get_account_balance"
+    dependencies:
+      - "get_account_overview"
+    agent: "financial_assistant"
+    priority: "high"
+    parameters:
+      account_id: "account_id_placeholder"
+
+  get_balance_summary:
+    name: "Generate Balance Summary"
+    description: "Create a summary of balances across all accounts or selected accounts."
+    expected_output: "Balance summary with totals by account type and overall financial position."
+    required_tools:
+      - "get_balance_summary"
+    dependencies:
+      - "get_account_overview"
+    agent: "financial_analyst"
+    priority: "high"
+    parameters:
+      account_ids: null  # null means all accounts
+
+  # Transaction Analysis Tasks
+  get_recent_transactions:
+    name: "Get Recent Transactions"
+    description: "Retrieve recent transactions across all accounts or for a specific account."
+    expected_output: "List of recent transactions with amounts, dates, and descriptions."
+    required_tools:
+      - "get_transactions"
+    dependencies:
+      - "get_account_overview"
+    agent: "financial_assistant"
+    priority: "high"
+    parameters:
+      account_id: null  # null means all accounts
+      from_date: "30_days_ago"
+      to_date: "today"
+      count: 100
+
+  get_transaction_details:
+    name: "Get Transaction Details"
+    description: "Retrieve detailed information about a specific transaction."
+    expected_output: "Detailed transaction information including status and any additional details."
+    required_tools:
+      - "get_transaction_details"
+    dependencies:
+      - "get_recent_transactions"
+    agent: "financial_assistant"
+    priority: "medium"
+    parameters:
+      account_id: "account_id_placeholder"
+      transaction_id: "transaction_id_placeholder"
+
+  search_transactions:
+    name: "Search for Transactions"
+    description: "Search for transactions matching specific criteria such as description, amount, or date range."
+    expected_output: "Filtered list of transactions matching search criteria."
+    required_tools:
+      - "search_transactions"
+    dependencies:
+      - "get_recent_transactions"
+    agent: "financial_assistant"
+    priority: "medium"
+    parameters:
+      query: "search_term"
+      min_amount: null
+      max_amount: null
+      from_date: null
+      to_date: null
+      transaction_type: null
+      account_id: null
+
+  categorize_transactions:
+    name: "Categorize Transactions"
+    description: "Categorize transactions by their type to understand spending patterns."
+    expected_output: "Transactions grouped by category with totals and distribution."
+    required_tools:
+      - "categorize_transactions"
+    dependencies:
+      - "get_recent_transactions"
+    agent: "financial_analyst"
+    priority: "high"
+    parameters:
+      from_date: "90_days_ago"
+      to_date: "today"
+
+  analyze_spending:
+    name: "Analyze Spending Patterns"
+    description: "Analyze spending patterns by transaction type, date, or description."
+    expected_output: "Spending analysis with breakdowns, trends, and top spending categories."
+    required_tools:
+      - "analyze_spending"
+    dependencies:
+      - "categorize_transactions"
+    agent: "financial_analyst"
+    priority: "high"
+    parameters:
+      from_date: "90_days_ago"
+      to_date: "today"
+      group_by: "type"
+      account_id: null
+
+  # Cash Flow Analysis Tasks
+  analyze_cash_flow:
+    name: "Analyze Cash Flow"
+    description: "Analyze cash flow patterns including inflows, outflows, and net flow over time."
+    expected_output: "Cash flow analysis with inflow/outflow breakdown and recurring transaction identification."
+    required_tools:
+      - "analyze_cash_flow"
+    dependencies:
+      - "get_recent_transactions"
+    agent: "financial_analyst"
+    priority: "high"
+    parameters:
+      period_days: 90
+      account_id: null
+
+  identify_recurring_transactions:
+    name: "Identify Recurring Transactions"
+    description: "Identify recurring income and expenses from transaction history."
+    expected_output: "List of recurring transactions with frequency, amount, and next expected date."
+    required_tools:
+      - "identify_recurring_transactions"
+    dependencies:
+      - "analyze_cash_flow"
+    agent: "financial_analyst"
+    priority: "medium"
+    parameters:
+      min_occurrences: 2
+      amount_tolerance: 1.0
+      days: 90
+      account_id: null
+
+  forecast_cash_flow:
+    name: "Forecast Cash Flow"
+    description: "Predict future cash flow based on historical transactions and recurring patterns."
+    expected_output: "Cash flow forecast with daily projections and ending balance estimates."
+    required_tools:
+      - "forecast_cash_flow"
+    dependencies:
+      - "identify_recurring_transactions"
+      - "get_balance_summary"
+    agent: "financial_planner"
+    priority: "high"
+    parameters:
+      forecast_days: 30
+      include_recurring: true
+      account_id: null
+
+  # Financial Reporting Tasks
+  generate_monthly_financial_report:
+    name: "Generate Monthly Financial Report"
+    description: "Create a comprehensive monthly financial report with account balances, spending analysis, and cash flow."
+    expected_output: "Complete financial report with visualizations and insights."
+    required_tools:
+      - "get_balance_summary"
+      - "analyze_spending"
+      - "analyze_cash_flow"
+    dependencies:
+      - "get_balance_summary"
+      - "analyze_spending"
+      - "analyze_cash_flow"
+    agent: "financial_analyst"
+    priority: "high"
+    parameters:
+      month: "current_month"
+      include_forecast: true
+
+  identify_saving_opportunities:
+    name: "Identify Saving Opportunities"
+    description: "Analyze spending patterns to identify potential areas for saving money."
+    expected_output: "List of saving opportunities with estimated monthly savings."
+    required_tools:
+      - "analyze_spending"
+      - "identify_recurring_transactions"
+    dependencies:
+      - "analyze_spending"
+      - "identify_recurring_transactions"
+    agent: "financial_planner"
+    priority: "medium"
+    parameters:
+      min_potential_savings: 10.0
+
+  monitor_large_transactions:
+    name: "Monitor Large Transactions"
+    description: "Monitor and alert on unusually large transactions across all accounts."
+    expected_output: "List of large transactions that exceed normal spending patterns."
+    required_tools:
+      - "get_transactions"
+      - "analyze_spending"
+    dependencies:
+      - "analyze_spending"
+    agent: "financial_assistant"
+    priority: "medium"
+    parameters:
+      threshold_percentage: 200
+      min_amount: 100
+      from_date: "30_days_ago"

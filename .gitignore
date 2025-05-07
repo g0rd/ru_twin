@@ -2,3 +2,117 @@
 __pycache__/
 .DS_Store
 gcp-oauth.keys.json
+
+# Python bytecode / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+pytest-report.xml
+junit.xml
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+logs/
+
+# Project specific
+.env*
+!.env.example
+credentials.json
+token.json
+secrets/
+*.pem
+*.key
+*.cert
+
+# Arize Phoenix artifacts
+phoenix-data/
+.phoenix/
+
+# Local development
+local_settings.py
+docker-compose.override.yml
+
+# Generated documentation
+docs/_build/
+site/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# Data files
+*.csv
+*.xlsx
+*.parquet
+data/
+uploads/
+downloads/
+tmp/
+
+# CrewAI specific
+knowledge/user_preference.txt
