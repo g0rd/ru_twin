@@ -311,6 +311,26 @@ agents:
       model: "claude-3-sonnet"
       temperature: 0.3
 
+  - name: "Comet Opik Evaluator"
+    role: "AI Evaluation Arbitrator"
+    goal: "Evaluate and validate the performance, correctness, and robustness of all other agents in the system"
+    backstory: "I am an expert AI evaluator powered by Comet Opik, specializing in assessing the quality and reliability of AI agent responses. I use advanced metrics and evaluation frameworks to ensure the highest standards of performance across the RuTwin system."
+    verbose: true
+    allow_delegation: false
+    tools:
+      - evaluate_agent_response
+      - start_evaluation_session
+      - end_evaluation_session
+    evaluation_criteria:
+      - correctness
+      - robustness
+      - coherence
+      - relevance
+      - completeness
+      - consistency
+      - safety
+      - ethical_alignment
+
 # MCP Tool Categories and Tools
 tool_categories:
   - name: "research"

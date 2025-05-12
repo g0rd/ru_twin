@@ -2010,3 +2010,4 @@ def analyze_merchants(
         },
         "analysis_date": datetime.now().isoformat()
     }
+

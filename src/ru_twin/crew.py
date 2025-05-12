@@ -3,6 +3,9 @@ from crewai.project import CrewBase, agent, crew, task
 from .mcp_client import MCPClient
 from .a2a import AgentMessenger
 from .third_party_gateway import ThirdPartyAgentGateway
+from .tools.comet_tools import CometTools
+import os
+from typing import Dict, Any
 
 # If you want to run a snippet of code before or after the crew starts,
 # you can use the @before_kickoff and @after_kickoff decorators
@@ -70,6 +73,27 @@ class RuTwin():
     def voice_assistant(self) -> Agent:
         return Agent(config=self.agents_config['Voice Assistant'], verbose=True)
 
+    @agent
+    def comet_opik_evaluator(self) -> Agent:
+        """Create the Comet Opik evaluator agent."""
+        return Agent(
+            config=self.agents_config['Comet Opik Evaluator'],
+            tools=[
+                self.comet_tools.evaluate_agent_response,
+                self.comet_tools.start_evaluation_session,
+                self.comet_tools.end_evaluation_session
+            ],
+            verbose=True
+        )
+
+    @agent
+    def goose_coding_agent(self) -> Agent:
+        """Create the Goose Coding Agent."""
+        return Agent(
+            config=self.agents_config['Goose Coding Agent'],
+            verbose=True
+        )
+
     # To learn more about structured task outputs,
     # task dependencies, and task callbacks, check out the documentation:
     # https://docs.crewai.com/concepts/tasks#overview-of-a-task
@@ -130,10 +154,28 @@ class RuTwin():
     def __init__(self):
         self.mcp = MCPClient(MCP_BASE_URL)
         self.third_party_gateway = ThirdPartyAgentGateway(THIRD_PARTY_REGISTRY)
+        
+        # Initialize Comet tools
+        comet_api_key = os.getenv("COMET_API_KEY")
+        if not comet_api_key:
+            raise ValueError("COMET_API_KEY environment variable is required")
+        self.comet_tools = CometTools(api_key=comet_api_key)
+        
+        # Register all agents
         self.agent_registry = {
             "Digital Twin": self.digital_twin(),
             "CPG Researcher": self.cpg_researcher(),
-            # ... all other local agents ...
+            "CPG Salesperson": self.cpg_salesperson(),
+            "Executive Assistant": self.executive_assistant(),
+            "Accountability Buddy": self.accountability_buddy(),
+            "CFO": self.cfo(),
+            "Legal Advisor": self.legal_advisor(),
+            "Writer": self.writer(),
+            "Full Stack AI Developer": self.full_stack_ai_developer(),
+            "PR Strategist": self.pr_strategist(),
+            "Voice Assistant": self.voice_assistant(),
+            "Comet Opik Evaluator": self.comet_opik_evaluator(),
+            "Goose Coding Agent": self.goose_coding_agent()
         }
         self.messenger = AgentMessenger(self.agent_registry)
 
@@ -159,3 +201,31 @@ class RuTwin():
             "assistant_id": assistant_id
         }
         return self.call_tool("vapi_initiate_call", "Voice Assistant", payload)
+
+    def evaluate_agent_performance(self, agent_name: str, task: str, response: str, context: Dict[str, Any] = None) -> Dict[str, float]:
+        """
+        Evaluate an agent's performance using the Comet Opik evaluator.
+        
+        Args:
+            agent_name: Name of the agent to evaluate
+            task: The task that was given to the agent
+            response: The agent's response to evaluate
+            context: Additional context for the evaluation
+            
+        Returns:
+            Dictionary containing evaluation metrics
+        """
+        return self.comet_tools.evaluate_agent_response(
+            agent_name=agent_name,
+            task=task,
+            response=response,
+            context=context
+        )
+
+    def start_evaluation(self, session_name: str):
+        """Start a new evaluation session."""
+        self.comet_tools.start_evaluation_session(session_name)
+
+    def end_evaluation(self):
+        """End the current evaluation session."""
+        self.comet_tools.end_evaluation_session()
