@@ -1,0 +1,287 @@
+servers:
+  - name: "google_mail"
+    url: "http://localhost:8020/sse"
+    description: "Use this service to send an email to the user"
+    tools:
+      - name: "gmail_send"
+        description: "Send emails using Gmail API"
+        version: "1.0.0"
+      - name: "gmail_read"
+        description: "Read emails from Gmail inbox"
+        version: "1.0.0"
+      - name: "gmail_draft"
+        description: "Create and manage email drafts"
+        version: "1.0.0"
+      - name: "gmail_labels"
+        description: "Manage Gmail labels and categories"
+        version: "1.0.0"
+      - name: "gmail_search"
+        description: "Search through Gmail messages"
+        version: "1.0.0"
+
+  - name: "google_sheets"
+    url: "http://localhost:8010/sse"
+    description: "Use this service to read and write transactions for the user"
+    tools:
+      - name: "sheets_read"
+        description: "Read data from Google Sheets"
+        version: "1.0.0"
+      - name: "sheets_write"
+        description: "Write data to Google Sheets"
+        version: "1.0.0"
+      - name: "sheets_format"
+        description: "Format cells and ranges in Google Sheets"
+        version: "1.0.0"
+      - name: "sheets_create"
+        description: "Create new Google Sheets documents"
+        version: "1.0.0"
+      - name: "sheets_share"
+        description: "Manage sharing and permissions"
+        version: "1.0.0"
+      - name: "sheets_formulas"
+        description: "Work with formulas and calculations"
+        version: "1.0.0"
+
+  - name: "google_docs"
+    url: "http://localhost:8030/sse"
+    description: "Use this tool to create a report for the user"
+    tools:
+      - name: "docs_create"
+        description: "Create new Google Docs documents"
+        version: "1.0.0"
+      - name: "docs_edit"
+        description: "Edit content in Google Docs"
+        version: "1.0.0"
+      - name: "docs_format"
+        description: "Format text and paragraphs"
+        version: "1.0.0"
+      - name: "docs_insert"
+        description: "Insert images, tables, and other elements"
+        version: "1.0.0"
+      - name: "docs_export"
+        description: "Export documents to different formats"
+        version: "1.0.0"
+      - name: "docs_share"
+        description: "Manage document sharing and permissions"
+        version: "1.0.0"
+
+  - name: "shopify"
+    url: "http://shopify-mcp:8000"
+    description: "Shopify MCP server for e-commerce and store management tools"
+    tools:
+      - name: "shopify_search_dev_docs"
+        description: "Search Shopify developer documentation"
+        version: "1.0.0"
+      - name: "shopify_introspect_admin_schema"
+        description: "Introspect Shopify Admin API schema"
+        version: "1.0.0"
+      - name: "shopify_admin_graphql"
+        description: "Execute GraphQL queries against Shopify Admin API"
+        version: "1.0.0"
+      - name: "shopify_store_management"
+        description: "Manage Shopify store settings and configurations"
+        version: "1.0.0"
+      - name: "shopify_product_management"
+        description: "Manage Shopify products and inventory"
+        version: "1.0.0"
+      - name: "shopify_order_management"
+        description: "Manage Shopify orders and fulfillments"
+        version: "1.0.0"
+
+  - name: "teller"
+    url: "http://teller-mcp:8000"
+    description: "Teller MCP server for banking and financial tools"
+    tools:
+      - name: "teller_account_management"
+        description: "Manage Teller bank accounts and connections"
+        version: "1.0.0"
+      - name: "teller_transaction_management"
+        description: "Access and manage banking transactions"
+        version: "1.0.0"
+      - name: "teller_balance_check"
+        description: "Check account balances and financial status"
+        version: "1.0.0"
+      - name: "teller_payment_processing"
+        description: "Process payments and transfers"
+        version: "1.0.0"
+
+  - name: "plaid"
+    url: "http://plaid-mcp:8000"
+    description: "Plaid MCP server for financial data aggregation tools"
+    tools:
+      - name: "plaid_link_management"
+        description: "Manage Plaid Link connections"
+        version: "1.0.0"
+      - name: "plaid_transaction_analysis"
+        description: "Analyze transaction data from connected accounts"
+        version: "1.0.0"
+      - name: "plaid_balance_tracking"
+        description: "Track account balances across institutions"
+        version: "1.0.0"
+      - name: "plaid_identity_verification"
+        description: "Verify user identity through Plaid"
+        version: "1.0.0"
+
+  - name: "goose"
+    url: "http://goose-mcp:8000"
+    description: "Goose MCP server for AI development and code generation tools"
+    tools:
+      - name: "goose_code_generation"
+        description: "Generate code using Goose's AI capabilities"
+        version: "1.0.0"
+      - name: "goose_project_setup"
+        description: "Set up new projects with Goose"
+        version: "1.0.0"
+      - name: "goose_webscraping"
+        description: "Perform web scraping tasks"
+        version: "1.0.0"
+      - name: "goose_code_review"
+        description: "Review and analyze code"
+        version: "1.0.0"
+
+  - name: "senso"
+    url: "http://senso-mcp:8000"
+    description: "Senso MCP server for content management and generation tools"
+    tools:
+      - name: "senso_content_upload"
+        description: "Upload content to Senso platform"
+        version: "1.0.0"
+      - name: "senso_content_list"
+        description: "List and manage uploaded content"
+        version: "1.0.0"
+      - name: "senso_content_search"
+        description: "Search through Senso content"
+        version: "1.0.0"
+      - name: "senso_content_generate"
+        description: "Generate new content using Senso"
+        version: "1.0.0"
+
+  - name: "comet"
+    url: "http://comet-mcp:8000"
+    description: "Comet MCP server for AI evaluation and monitoring tools"
+    tools:
+      - name: "comet_evaluate_response"
+        description: "Evaluate AI agent responses using Comet Opik"
+        version: "1.0.0"
+      - name: "comet_start_session"
+        description: "Start a new evaluation session"
+        version: "1.0.0"
+      - name: "comet_end_session"
+        description: "End the current evaluation session"
+        version: "1.0.0"
+      - name: "comet_log_metrics"
+        description: "Log evaluation metrics to Comet"
+        version: "1.0.0"
+
+# Server configuration
+server_config:
+  # Global settings
+  global:
+    timeout: 30  # seconds
+    max_retries: 3
+    retry_delay: 1  # seconds
+    rate_limit:
+      requests_per_minute: 60
+      burst_limit: 10
+
+  # Authentication settings
+  auth:
+    type: "bearer"  # or "api_key"
+    header_name: "Authorization"
+    token_prefix: "Bearer"
+
+  # Logging settings
+  logging:
+    level: "INFO"
+    format: "json"
+    include_timestamps: true
+    include_request_id: true
+
+  # Monitoring settings
+  monitoring:
+    enabled: true
+    metrics:
+      - name: "request_count"
+        type: "counter"
+      - name: "response_time"
+        type: "histogram"
+      - name: "error_count"
+        type: "counter"
+    health_check:
+      interval: 30  # seconds
+      timeout: 5  # seconds
+
+  # Security settings
+  security:
+    ssl_verify: true
+    allowed_origins: ["*"]
+    cors_enabled: true
+    rate_limiting_enabled: true
+
+# Tool configuration
+tool_config:
+  # Default settings for all tools
+  defaults:
+    timeout: 60  # seconds
+    max_retries: 3
+    retry_delay: 1  # seconds
+    cache_ttl: 300  # seconds
+
+  # Google services settings
+  google_mail:
+    api_version: "v1"
+    rate_limit: 100  # requests per minute
+    timeout: 30  # seconds
+    scopes:
+      - "https://www.googleapis.com/auth/gmail.send"
+      - "https://www.googleapis.com/auth/gmail.readonly"
+      - "https://www.googleapis.com/auth/gmail.modify"
+
+  google_sheets:
+    api_version: "v4"
+    rate_limit: 60  # requests per minute
+    timeout: 30  # seconds
+    scopes:
+      - "https://www.googleapis.com/auth/spreadsheets"
+      - "https://www.googleapis.com/auth/drive.file"
+
+  google_docs:
+    api_version: "v1"
+    rate_limit: 60  # requests per minute
+    timeout: 30  # seconds
+    scopes:
+      - "https://www.googleapis.com/auth/documents"
+      - "https://www.googleapis.com/auth/drive.file"
+
+  # Tool-specific settings
+  shopify:
+    api_version: "2024-01"
+    rate_limit: 2  # requests per second
+    timeout: 30  # seconds
+
+  teller:
+    environment: "sandbox"  # or "production"
+    rate_limit: 5  # requests per second
+    timeout: 20  # seconds
+
+  plaid:
+    environment: "sandbox"  # or "production"
+    rate_limit: 3  # requests per second
+    timeout: 25  # seconds
+
+  goose:
+    model: "gpt-4"  # or other model name
+    temperature: 0.7
+    max_tokens: 2000
+    timeout: 45  # seconds
+
+  senso:
+    environment: "production"
+    rate_limit: 10  # requests per second
+    timeout: 30  # seconds
+
+  comet:
+    project_name: "ru_twin_evaluations"
+    workspace: "ru_twin"
+    rate_limit: 5  # requests per second
+    timeout: 20  # seconds 
