@@ -11,7 +11,7 @@ class TaskManagerInput(BaseModel):
 
 class TaskManager(BaseTool):
     name: str = "TaskManager"
-    description: "Manage and prioritize tasks effectively"
+    description: str = "Manage and prioritize tasks effectively"
     args_schema: Type[BaseModel] = TaskManagerInput
 
     def _run(self, tasks: List[Dict], priorities: List[str], deadline: datetime) -> str:
@@ -37,7 +37,7 @@ class ProgressTrackerInput(BaseModel):
 
 class ProgressTracker(BaseTool):
     name: str = "ProgressTracker"
-    description: "Track progress towards goals and provide accountability"
+    description: str = "Track progress towards goals and provide accountability"
     args_schema: Type[BaseModel] = ProgressTrackerInput
 
     def _run(self, goals: List[str], metrics: List[str], frequency: str) -> str:

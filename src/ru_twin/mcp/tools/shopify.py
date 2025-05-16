@@ -14,8 +14,8 @@ from typing import Dict, List, Optional, Union, Any
 import requests
 from pydantic import BaseModel, Field
 
-from ru_twin.mcp_client import MCPClient
-from ru_twin.third_party_gateway import ThirdPartyGateway
+from ru_twin.mcp.client import MCPClient
+from ru_twin.third_party_gateway import ThirdPartyAgentGateway
 
 
 class ProductPerformanceMetrics(BaseModel):
@@ -72,7 +72,7 @@ class ShopifyClient(MCPClient):
         shop_url: str,
         access_token: str,
         api_version: str = "2025-04",
-        gateway: Optional[ThirdPartyGateway] = None,
+        gateway: Optional[ThirdPartyAgentGateway] = None,
     ):
         """
         Initialize the Shopify GraphQL client.

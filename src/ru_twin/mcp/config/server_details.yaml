@@ -90,19 +90,16 @@ servers:
 
   - name: "teller"
     url: "http://teller-mcp:8000"
-    description: "Teller MCP server for banking and financial tools"
+    description: "Teller MCP server for financial data aggregation tools"
     tools:
-      - name: "teller_account_management"
-        description: "Manage Teller bank accounts and connections"
+      - name: "teller_transaction_analysis"
+        description: "Analyze transactions and spending patterns"
         version: "1.0.0"
-      - name: "teller_transaction_management"
-        description: "Access and manage banking transactions"
+      - name: "teller_balance_tracking"
+        description: "Track account balances and changes"
         version: "1.0.0"
-      - name: "teller_balance_check"
-        description: "Check account balances and financial status"
-        version: "1.0.0"
-      - name: "teller_payment_processing"
-        description: "Process payments and transfers"
+      - name: "teller_identity_verification"
+        description: "Verify user identity through Teller"
         version: "1.0.0"
 
   - name: "plaid"
@@ -260,9 +257,9 @@ tool_config:
     timeout: 30  # seconds
 
   teller:
-    environment: "sandbox"  # or "production"
-    rate_limit: 5  # requests per second
-    timeout: 20  # seconds
+    api_version: "2023-11-01"
+    rate_limit: 100
+    timeout: 30
 
   plaid:
     environment: "sandbox"  # or "production"

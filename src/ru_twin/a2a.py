@@ -1,3 +1,5 @@
+__all__ = ['AgentMessenger']
+
 class AgentMessenger:
     def __init__(self, agent_registry):
         self.agent_registry = agent_registry

@@ -1,102 +1,93 @@
-from typing import Dict, Type, List
-from crewai.tools import BaseTool
-from .development_tools import CodeGenerator, ArchitectureDesigner
-from .pr_tools import MediaMonitor, ContentStrategist
-from .integration_tools import APIDesigner
-from .research_tools import MarketAnalysis, CompetitorAnalysis
-from .financial_tools import FinancialAnalysis, BudgetPlanner
-from .legal_tools import LegalAnalysis, ComplianceChecker
-from .assistant_tools import TaskManager, ProgressTracker
-from .vapi_tools import ListCallsTool, InitiateCallTool
-from .mcp_clients.gumloop_google_sheets import GumloopGoogleSheetsMCP
-from .mcp_clients.gumloop_gmail import GumloopGmailMCP
-from .mcp_clients.gumloop_slack import GumloopSlackMCP
-from .mcp_clients.senso import SensoMCP
-from .mcp_clients.goose import GooseMCP
-from .mcp_clients.shopify_mcp import ShopifyMCPClient
+import logging
+import os
+from typing import Dict, Callable, Any, Optional
+
+from pydantic import BaseModel
+
+from ru_twin.mcp.tools.shopify import ShopifyClient
+from ru_twin.mcp.tools.teller import TellerClient
+
 
 class ToolRegistry:
-    """Registry for managing custom tools."""
-    
+    """
+    A registry for tools that can be used by AI agents.
+
+    This class manages the available tools, their descriptions, and input models.
+    It allows agents to discover and use tools for various tasks.
+    """
+
     def __init__(self):
-        self.tools: Dict[str, callable] = {
-            "code_generator": CodeGenerator,
-            "architecture_designer": ArchitectureDesigner,
-            "media_monitor": MediaMonitor,
-            "content_strategist": ContentStrategist,
-            "api_designer": APIDesigner,
-            "market_analysis": MarketAnalysis,
-            "competitor_analysis": CompetitorAnalysis,
-            "financial_analysis": FinancialAnalysis,
-            "budget_planner": BudgetPlanner,
-            "legal_analysis": LegalAnalysis,
-            "compliance_checker": ComplianceChecker,
-            "task_manager": TaskManager,
-            "progress_tracker": ProgressTracker,
-            "vapi_list_calls": ListCallsTool,
-            "vapi_initiate_call": InitiateCallTool,
-            "google_sheets_read": GumloopGoogleSheetsMCP(base_url="https://api.gumloop.com", api_key="YOUR_KEY").read_sheet,
-            "google_sheets_write": GumloopGoogleSheetsMCP(base_url="https://api.gumloop.com", api_key="YOUR_KEY").write_sheet,
-            "gmail_read": GumloopGmailMCP(base_url="https://api.gumloop.com", api_key="YOUR_KEY").read_emails,
-            "gmail_send": GumloopGmailMCP(base_url="https://api.gumloop.com", api_key="YOUR_KEY").send_email,
-            "slack_send_message": GumloopSlackMCP(base_url="https://api.gumloop.com", api_key="YOUR_KEY").send_message,
+        """Initialize the ToolRegistry with available tools."""
+        self.tools: Dict[str, Dict[str, Any]] = {}
+        self.logger = logging.getLogger(__name__)
+
+        # Initialize Shopify MCP client if credentials are available
+        shopify_shop_url = os.getenv("SHOPIFY_SHOP_URL")
+        shopify_access_token = os.getenv("SHOPIFY_ACCESS_TOKEN")
+
+        if shopify_shop_url and shopify_access_token:
+            self.shopify_mcp = ShopifyClient(
+                shop_url=shopify_shop_url,
+                access_token=shopify_access_token
+            )
+            self.logger.info("Shopify client initialized in ToolRegistry")
+        else:
+            self.shopify_mcp = None
+            self.logger.warning(
+                "Shopify client not initialized in ToolRegistry. "
+                "Missing SHOPIFY_SHOP_URL or SHOPIFY_ACCESS_TOKEN environment variables."
+            )
+
+        # Initialize Teller MCP client (replace with actual initialization if needed)
+        self.teller_mcp = None
+        # Add Teller initialization logic here if needed
+
+    def register_tool(self, name: str, function: Callable, description: str, input_model: BaseModel):
+        """
+        Register a new tool with the registry.
+
+        Args:
+            name: The name of the tool.
+            function: The callable function that implements the tool.
+            description: A description of what the tool does.
+            input_model: A Pydantic model defining the tool's input parameters.
+        """
+        self.tools[name] = {
+            "function": function,
+            "description": description,
+            "input_model": input_model
         }
-        self.senso = SensoMCP(api_key="YOUR_SENSO_API_KEY")
-        self.goose = GooseMCP(goose_cli_path="goose")
-        self.shopify_mcp = ShopifyMCPClient(base_url="http://shopify_mcp:5005")
-        self.tools.update({
-            "senso_upload_content": self.senso.upload_content,
-            "senso_list_content": self.senso.list_content,
-            "senso_search": self.senso.search,
-            "senso_generate": self.senso.generate,
-            "goose_code": self.goose.run_prompt,
-            "goose_project": self.goose.create_project,
-            "shopify_search_dev_docs": self.shopify_mcp.search_dev_docs,
-            "shopify_introspect_admin_schema": self.shopify_mcp.introspect_admin_schema,
-            "shopify_admin_graphql": self.shopify_mcp.shopify_admin_graphql,
-        })
-    
-    def get_tool(self, tool_name: str) -> callable:
-        """Get a tool by name."""
-        return self.tools.get(tool_name)
-    
-    def get_tools_for_agent(self, agent_name: str) -> List[callable]:
-        """Get all tools for a specific agent."""
-        agent_tool_mapping = {
-            "Digital Twin": [
-                "task_manager",
-                "progress_tracker",
-                "market_analysis"
-            ],
-            "CPG Researcher": [
-                "market_analysis",
-                "competitor_analysis"
-            ],
-            "CPG Salesperson": [
-                "competitor_analysis",
-                "market_analysis"
-            ],
-            "Executive Assistant": [
-                "task_manager",
-                "progress_tracker"
-            ],
-            "Accountability Buddy": [
-                "progress_tracker",
-                "task_manager"
-            ],
-            "CFO": [
-                "financial_analysis",
-                "budget_planner"
-            ],
-            "Legal Advisor": [
-                "legal_analysis",
-                "compliance_checker"
-            ],
-            "PR Strategist": [
-                "media_monitor",
-                "content_strategist"
-            ]
-        }
-        
-        tool_names = agent_tool_mapping.get(agent_name, [])
-        return [self.get_tool(tool_name) for tool_name in tool_names if self.get_tool(tool_name)] 
+        self.logger.info(f"Registered tool: {name}")
+
+    def get_tool(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a tool from the registry by name.
+
+        Args:
+            name: The name of the tool.
+
+        Returns:
+            The tool's information (function, description, input model) or None if not found.
+        """
+        return self.tools.get(name)
+
+    def get_all_tools(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get all registered tools.
+
+        Returns:
+            A dictionary of all registered tools.
+        """
+        return self.tools
+
+    def is_tool_available(self, name: str) -> bool:
+        """
+        Check if a tool is available in the registry.
+
+        Args:
+            name: The name of the tool.
+
+        Returns:
+            True if the tool is available, False otherwise.
+        """
+        return name in self.tools

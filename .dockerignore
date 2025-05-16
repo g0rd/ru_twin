@@ -1,0 +1,91 @@
+# 1. Version control
+.git/
+.gitignore
+.hg/
+.svn/
+
+# 2. Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+
+# 3. Virtual environments
+.venv/
+venv/
+ENV/
+
+# 4. IDE/editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 5. Build and distribution outputs
+dist/
+build/
+out/
+
+# 6. Test and debug artifacts
+test/
+tests/
+*.log
+debug/
+
+# 7. Node.js (not detected, but common)
+node_modules/
+npm-debug.log
+yarn-debug.log
+
+# 8. Go (not detected, but common)
+/vendor/
+*.test
+.go-cache/
+
+# 9. Java (not detected, but common)
+target/
+*.class
+.gradle/
+
+# 10. Environment and secrets
+.env*
+*.env
+*.pem
+*.key
+*.crt
+config.local.*
+*.local.yml
+
+# 11. Documentation and markdown
+docs/
+*.md
+README*
+
+# 12. Docker and Compose files
+Dockerfile*
+docker-compose*
+
+# 13. Temporary and local files
+.DS_Store
+*.bak
+tmp/
+temp/
+*.tmp
+.local/
+local/
+
+# 14. Project-specific: skip website/ if empty
+website/
+
+# 15. Miscellaneous
+*.toml
+
+# 16. Exclude backup files
+*~
+
+# 17. Exclude MATLAB files (if not needed)
+*.m
+
+# End of .dockerignore

@@ -7,6 +7,8 @@ crewai_tools==0.1.6
 pydantic==2.4.2
 python-dotenv==1.0.0
 PyYAML==6.0.1
+anthropic==0.8.1
+aiohttp==3.9.1
 
 # API and networking
 requests==2.31.0
@@ -21,13 +23,14 @@ pandas==2.1.0
 numpy==1.24.3
 
 # FastAPI server components
-fastapi==0.103.1
-uvicorn[standard]==0.23.2
+fastapi==0.104.1
+uvicorn==0.24.0
 starlette==0.27.0
 jinja2==3.1.2  # For templating if needed
 
 # Observability
-arize-phoenix==1.0.0
+arize-phoenix==9.0.1
+arize-phoenix-otel>=0.5.1
 opentelemetry-api==1.19.0
 opentelemetry-sdk==1.19.0
 opentelemetry-exporter-otlp==1.19.0
@@ -37,7 +40,7 @@ structlog==23.1.0
 rich==13.5.2  # For enhanced console output
 
 # Testing
-pytest==7.4.0
+pytest==7.4.3
 pytest-cov==4.1.0
 responses==0.23.3  # For mocking HTTP requests
 pytest-mock==3.11.1
@@ -55,3 +58,9 @@ jsonschema==4.19.0  # For JSON validation
 # Comet ML dependencies
 comet-ml>=3.31.12
 opik>=0.1.0
+
+# Development
+black==23.10.1
+isort==5.12.0
+mypy==1.6.1
+ruff==0.1.3

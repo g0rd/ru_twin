@@ -1,5 +1,5 @@
 from typing import Dict, Any, Optional
-from ..tools.base import BaseTool, ToolInputSchema
+from ru_twin.mcp.tools.base import BaseTool, ToolInputSchema
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request

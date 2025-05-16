@@ -1,11 +1,11 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
-from .mcp_client import MCPClient
+from .mcp.client import MCPClient
 from .a2a import AgentMessenger
 from .third_party_gateway import ThirdPartyAgentGateway
 from .tools.comet_tools import CometTools
 import os
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 # If you want to run a snippet of code before or after the crew starts,
 # you can use the @before_kickoff and @after_kickoff decorators
@@ -16,6 +16,41 @@ THIRD_PARTY_REGISTRY = {
     "ExternalAgent1": "https://external-agent1.com/api/task",
     # Add more as needed
 }
+
+def create_crew(
+    agents_config: Dict[str, Any],
+    tasks_config: Dict[str, Any],
+    task_name: str,
+    tool_registry: Dict[str, Any],
+    a2a_messenger: AgentMessenger,
+    mcp_clients: List[MCPClient]
+) -> Crew:
+    """Create a RuTwin crew with the specified configuration.
+    
+    Args:
+        agents_config: Configuration for the agents
+        tasks_config: Configuration for the tasks
+        task_name: Name of the task to execute
+        tool_registry: Registry of available tools
+        a2a_messenger: Agent-to-agent messenger instance
+        mcp_clients: List of MCP clients
+        
+    Returns:
+        A configured Crew instance
+    """
+    # Create RuTwin instance
+    rutwin = RuTwin()
+    
+    # Override configurations
+    rutwin.agents_config = agents_config
+    rutwin.tasks_config = tasks_config
+    
+    # Set up tools and messengers
+    rutwin.mcp = mcp_clients[0] if mcp_clients else MCPClient(MCP_BASE_URL)
+    rutwin.messenger = a2a_messenger
+    
+    # Create and return the crew
+    return rutwin.crew()
 
 @CrewBase
 class RuTwin():

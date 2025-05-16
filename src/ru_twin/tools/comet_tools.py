@@ -1,8 +1,8 @@
 from typing import Dict, Any
-import comet_ml
 from comet_ml import Experiment
-from comet_ml.integration.opik import OpikEvaluator
-
+from opik import track, opik_context, Opik
+from opik.integrations.openai import track_openai
+from openai import OpenAI
 class CometTools:
     def __init__(self, api_key: str, project_name: str = "ru_twin_evaluations"):
         """Initialize Comet ML tools with API key and project name."""

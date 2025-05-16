@@ -4,8 +4,8 @@ import os
 from typing import Optional
 from contextlib import AsyncExitStack
 import yaml
-from mcp import ClientSession
-from mcp.client.sse import sse_client
+from .session import ClientSession
+from .sse import sse_client
 
 from anthropic import Anthropic
 from dotenv import load_dotenv

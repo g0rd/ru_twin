@@ -1,12 +1,12 @@
 from .google_base import GoogleBaseTool, GoogleToolInputSchema
-from .gmail import (
+from .google_mail import (
     GmailSendTool,
     GmailReadTool,
     GmailDraftTool,
     GmailLabelsTool,
     GmailSearchTool
 )
-from .sheets import (
+from .google_sheets import (
     SheetsReadTool,
     SheetsWriteTool,
     SheetsFormatTool,
@@ -14,7 +14,7 @@ from .sheets import (
     SheetsShareTool,
     SheetsFormulasTool
 )
-from .docs import (
+from .google_docs import (
     DocsCreateTool,
     DocsEditTool,
     DocsFormatTool,

@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Union, Any
 import pandas as pd
 from pydantic import BaseModel, Field
 
-from ru_twin.mcp_clients.shopify import ShopifyClient, ProductPerformanceMetrics, SEOMetadata, InventoryStatus
+from ru_twin.mcp.tools.shopify import ShopifyClient, ProductPerformanceMetrics, SEOMetadata, InventoryStatus
 from ru_twin.tools.tool_registry import ToolRegistry
 
 

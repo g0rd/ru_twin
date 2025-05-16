@@ -15,6 +15,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Any
+from contextlib import asynccontextmanager
 
 import yaml
 from dotenv import load_dotenv
@@ -22,6 +23,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import structlog
 import uvicorn
+import phoenix as px
 
 # OpenTelemetry imports
 from opentelemetry import trace, metrics
@@ -34,14 +36,12 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-# Arize Phoenix imports
-import arize.phoenix as phoenix
-from arize.phoenix.client import Client as PhoenixClient
+
 
 # RuTwin imports
 from ru_twin.crew import create_crew
-from ru_twin.a2a import A2AMessenger
-from ru_twin.third_party_gateway import ThirdPartyGateway
+from ru_twin.a2a import AgentMessenger
+from ru_twin.third_party_gateway import ThirdPartyAgentGateway
 from ru_twin.tools.tool_registry import ToolRegistry
 
 # Import tool registration functions
@@ -49,8 +49,44 @@ from ru_twin.tools.shopify_tools import register_tools as register_shopify_tools
 from ru_twin.tools.teller_tools import register_tools as register_teller_tools
 
 # Import MCP clients
-from ru_twin.mcp_clients.shopify import ShopifyClient
-from ru_twin.mcp_clients.teller import TellerClient
+from ru_twin.mcp.tools.shopify import ShopifyClient
+from ru_twin.mcp.tools.teller import TellerClient
+
+def init_opentelemetry() -> None:
+    """Initialize OpenTelemetry for tracing and metrics."""
+    # Get OTLP endpoint from environment or use default Phoenix endpoint
+    otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://phoenix:4317")
+    service_name = os.getenv("OTEL_SERVICE_NAME", "ru_twin")
+    
+    # Create a resource to identify the service
+    resource = Resource.create({"service.name": service_name})
+    
+    # Initialize TracerProvider with the resource
+    tracer_provider = TracerProvider(resource=resource)
+    
+    # Create OTLP exporter for traces
+    otlp_span_exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
+    
+    # Add span processor to the tracer provider
+    tracer_provider.add_span_processor(BatchSpanProcessor(otlp_span_exporter))
+    
+    # Set the global tracer provider
+    if not isinstance(trace.get_tracer_provider(), TracerProvider) or isinstance(trace.get_tracer_provider(), trace.NoOpTracerProvider):
+        trace.set_tracer_provider(tracer_provider)
+    
+    # Initialize MeterProvider with the resource
+    metric_reader = PeriodicExportingMetricReader(
+        OTLPMetricExporter(endpoint=otlp_endpoint)
+    )
+    meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+    
+    # Set the global meter provider
+    if not isinstance(metrics.get_meter_provider(), MeterProvider) or isinstance(metrics.get_meter_provider(), metrics.NoOpMeterProvider):
+        metrics.set_meter_provider(meter_provider)
+    
+    logger.info("OpenTelemetry initialized", 
+                otlp_endpoint=otlp_endpoint, 
+                service_name=service_name)
 
 # Configure logging
 structlog.configure(
@@ -73,12 +109,8 @@ structlog.configure(
 
 logger = structlog.get_logger(__name__)
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="RuTwin Crew API",
-    description="API for RuTwin Crew, an AI-powered task management system",
-    version="0.1.0",
-)
+# Initialize OpenTelemetry at module level
+init_opentelemetry()
 
 # Global variables
 tool_registry = None
@@ -87,58 +119,44 @@ a2a_messenger = None
 phoenix_client = None
 
 
-def init_opentelemetry() -> None:
-    """Initialize OpenTelemetry for tracing and metrics."""
-    # Get OTLP endpoint from environment or use default Phoenix endpoint
-    otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://phoenix:4317")
-    service_name = os.getenv("OTEL_SERVICE_NAME", "ru_twin")
-    
-    # Create a resource to identify the service
-    resource = Resource.create({"service.name": service_name})
-    
-    # Initialize TracerProvider with the resource
-    tracer_provider = TracerProvider(resource=resource)
-    
-    # Create OTLP exporter for traces
-    otlp_span_exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
-    
-    # Add span processor to the tracer provider
-    tracer_provider.add_span_processor(BatchSpanProcessor(otlp_span_exporter))
-    
-    # Set the global tracer provider
-    trace.set_tracer_provider(tracer_provider)
-    
-    # Initialize MeterProvider with the resource
-    metric_reader = PeriodicExportingMetricReader(
-        OTLPMetricExporter(endpoint=otlp_endpoint)
-    )
-    meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-    
-    # Set the global meter provider
-    metrics.set_meter_provider(meter_provider)
-    
-    # Instrument FastAPI
-    FastAPIInstrumentor.instrument_app(app)
-    
-    logger.info("OpenTelemetry initialized", 
-                otlp_endpoint=otlp_endpoint, 
-                service_name=service_name)
 
-
-def init_phoenix() -> PhoenixClient:
-    """Initialize Arize Phoenix client for observability."""
-    # Get Phoenix configuration from environment
-    phoenix_api_key = os.getenv("PHOENIX_API_KEY", "")
-    phoenix_space_key = os.getenv("PHOENIX_SPACE_KEY", "")
+def init_phoenix() -> Optional[Any]:
+    """
+    Initialize the Arize Phoenix client.
     
-    # Initialize Phoenix client
-    client = phoenix.Client(
-        api_key=phoenix_api_key,
-        space_key=phoenix_space_key,
-    )
-    
-    logger.info("Arize Phoenix client initialized")
-    return client
+    Returns:
+        Optional[px.Client]: Phoenix client instance or None if initialization fails
+    """
+    try:
+        # Get Phoenix endpoint from environment or use default
+        phoenix_endpoint = os.getenv("PHOENIX_CLIENT_ENDPOINT", "https://app.phoenix.arize.com")
+        
+        # Get Phoenix headers from environment
+        phoenix_headers_str = os.getenv("PHOENIX_CLIENT_HEADERS")
+        phoenix_headers = {}
+        
+        # Parse headers if provided
+        if phoenix_headers_str:
+            # Split by comma to get key=value pairs
+            header_pairs = phoenix_headers_str.split(",")
+            for pair in header_pairs:
+                if "=" in pair:
+                    key, value = pair.split("=", 1)
+                    phoenix_headers[key.strip()] = value.strip()
+        
+        if not phoenix_headers:
+            logger.warning("No Phoenix headers found. Phoenix client may not authenticate properly.")
+        
+        # Initialize Phoenix client
+        client = px.Client(endpoint=phoenix_endpoint, headers=phoenix_headers)
+        logger.info("Phoenix client initialized", endpoint=phoenix_endpoint)
+        return client
+    except ImportError:
+        logger.warning("Arize Phoenix library not installed. Phoenix client not initialized.")
+        return None
+    except Exception as e:
+        logger.error(f"Error initializing Phoenix client: {e}")
+        return None
 
 
 def load_config(config_path: str) -> Dict:
@@ -161,14 +179,14 @@ def init_tool_registry() -> ToolRegistry:
     return registry
 
 
-def init_third_party_gateway() -> ThirdPartyGateway:
+def init_third_party_gateway(registry: ToolRegistry) -> ThirdPartyAgentGateway:
     """Initialize the third-party gateway."""
-    return ThirdPartyGateway()
+    return ThirdPartyAgentGateway(registry=registry)
 
 
-def init_a2a_messenger() -> A2AMessenger:
+def init_a2a_messenger(registry: ToolRegistry) -> AgentMessenger:
     """Initialize the Agent-to-Agent messenger."""
-    return A2AMessenger()
+    return AgentMessenger(agent_registry=registry)
 
 
 def init_mcp_clients() -> Dict[str, Any]:
@@ -269,6 +287,47 @@ def run_crew(task_name: str, config_dir: str = "src/ru_twin/config") -> Any:
             return crew.kickoff()
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for FastAPI application startup and shutdown."""
+    global tool_registry, third_party_gateway, a2a_messenger, phoenix_client
+    
+    # Initialize Phoenix client
+    phoenix_client = init_phoenix()
+
+    # Initialize core components
+    tool_registry = init_tool_registry()
+    third_party_gateway = init_third_party_gateway(tool_registry)
+    a2a_messenger = init_a2a_messenger(tool_registry)
+    
+    logger.info("Application startup complete")
+    
+    yield
+    
+    # Cleanup logic
+    if phoenix_client and hasattr(phoenix_client, 'close'):
+        try:
+            await phoenix_client.close()
+            logger.info("Phoenix client closed")
+        except Exception as e:
+            logger.error(f"Error closing Phoenix client: {e}")
+    
+    logger.info("Application shutdown complete")
+
+
+# Initialize FastAPI app with lifespan
+app = FastAPI(
+    title="RuTwin Crew API",
+    description="API for RuTwin Crew, an AI-powered task management system",
+    version="0.1.0",
+    lifespan=lifespan
+)
+
+# Instrument the FastAPI app right after creation
+FastAPIInstrumentor.instrument_app(app)
+logger.info("FastAPI app instrumented with OpenTelemetry")
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
@@ -289,53 +348,30 @@ async def run_task_endpoint(task_name: str, request: Request):
         )
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize components on application startup."""
-    global tool_registry, third_party_gateway, a2a_messenger, phoenix_client
-    
-    # Initialize OpenTelemetry
-    init_opentelemetry()
-    
-    # Initialize Arize Phoenix
-    phoenix_client = init_phoenix()
-    
-    # Initialize core components
-    tool_registry = init_tool_registry()
-    third_party_gateway = init_third_party_gateway()
-    a2a_messenger = init_a2a_messenger()
-    
-    logger.info("Application startup complete")
 
 
 def main():
     """Main entry point for the application."""
     # Load environment variables
     load_dotenv()
-    
-    # Parse command line arguments
     parser = argparse.ArgumentParser(description="RuTwin Crew - AI Task Management System")
     parser.add_argument("--task", type=str, help="Name of the task to run")
-    parser.add_argument("--server", action="store_true", help="Run as a server")
+    parser.add_argument("--server", action="store_true", help="Run as a FastAPI server")
     parser.add_argument("--port", type=int, default=8000, help="Server port (default: 8000)")
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Server host (default: 0.0.0.0)")
     parser.add_argument("--test", action="store_true", help="Run in test mode")
     args = parser.parse_args()
     
-    # Initialize components if not running as a server
     if not args.server:
+        # For non-server mode, initialize components directly
+        init_opentelemetry() 
+        
         global tool_registry, third_party_gateway, a2a_messenger, phoenix_client
-        
-        # Initialize OpenTelemetry
-        init_opentelemetry()
-        
-        # Initialize Arize Phoenix
-        phoenix_client = init_phoenix()
-        
-        # Initialize core components
+        phoenix_client = init_phoenix()  # Initialize Phoenix for CLI mode
         tool_registry = init_tool_registry()
-        third_party_gateway = init_third_party_gateway()
-        a2a_messenger = init_a2a_messenger()
+        third_party_gateway = init_third_party_gateway(tool_registry)
+        a2a_messenger = init_a2a_messenger(tool_registry)
+   
     
     # Run the application
     if args.server:

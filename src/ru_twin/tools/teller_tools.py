@@ -14,7 +14,7 @@ import statistics
 import pandas as pd
 from pydantic import BaseModel, Field
 
-from ru_twin.mcp_clients.teller import (
+from ru_twin.mcp.tools.teller import (
     TellerClient, Account, Transaction, Balance, 
     AccountType, AccountSubtype, TransactionType, TransactionStatus
 )
