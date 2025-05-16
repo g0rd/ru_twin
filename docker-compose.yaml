@@ -53,26 +53,27 @@ services:
           cpus: "1.0"
 
   phoenix:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: ru_twin_phoenix
+    image: arizephoenix/phoenix:latest # Must be greater than 4.0 version to work
+    depends_on:
+      - db
     ports:
-      - "6006:6006"
-      - "4317:4317"
-    volumes:
-      - phoenix_data:/phoenix/data
+      - 6006:6006  # PHOENIX_PORT
+      - 4317:4317  # PHOENIX_GRPC_PORT
+      - 9090:9090  # [Optional] PROMETHEUS PORT IF ENABLED
     environment:
-      - PHOENIX_API_KEY=${PHOENIX_API_KEY}
-    networks:
-      - ru_twin_network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6006/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - PHOENIX_SQL_DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+  db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - 5432
+    volumes:
+      - database_data:/var/lib/postgresql/data
+
 
 
   redis:
@@ -173,6 +174,9 @@ volumes:
   chroma_data:
   minio_data:
   ollama_data:
+  volumes:
+  database_data:
+    driver: local
 
 networks:
   ru_twin_network:

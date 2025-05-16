@@ -1,30 +1,39 @@
-# Use the official Elixir image as the base
-FROM elixir:latest
+# Use an official lightweight Python runtime as a parent image
+FROM python:3.11-slim
 
-# Install Node.js and other dependencies
-RUN apt-get update && \
-    apt-get install -y nodejs npm postgresql-client && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app
 
-# Set the working directory
+# Create a non-root user and group
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
+# Set working directory
 WORKDIR /app
 
-# Copy the application files
-COPY . /app
+# Install system dependencies (if any)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Elixir dependencies
-RUN mix local.hex --force && \
-    mix local.rebar --force && \
-    mix deps.get && \
-    mix deps.compile
+# Copy only requirements first to leverage Docker cache
+COPY requirements.txt .
 
-# Compile assets (if applicable)
-RUN npm install --prefix ./assets && \
-    npm run deploy --prefix ./assets && \
-    mix phx.digest
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the Phoenix port
-EXPOSE 4000
+# Copy the rest of the application code
+COPY . .
 
-# Start the Phoenix server
-CMD ["mix", "phx.server"]
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose the port your app runs on
+EXPOSE 8000
+
+# Default command to run your app
+CMD ["python", "src/ru_twin/main.py", "--server", "--host", "0.0.0.0", "--port", "8000"]
