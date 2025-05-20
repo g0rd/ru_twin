@@ -2,14 +2,37 @@ from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from contextlib import asynccontextmanager
 from .server import MCPServer
+from .routes import tools_router, auth_router, config_router
+import os
 
-# Initialize FastAPI app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan context manager for FastAPI application startup and shutdown.
+    Handles initialization and cleanup of the MCP server.
+    """
+    # Create an instance of MCPServer
+    mcp_server_instance = MCPServer()
+    
+    # Store the MCPServer instance in the application state
+    app.state.mcp_server = mcp_server_instance
+    
+    yield
+    
+    # Cleanup code here if needed
+    # For example: await mcp_server_instance.cleanup()
+
+# Initialize FastAPI app with lifespan
 app = FastAPI(
     title="RuTwin MCP Server",
     description="Message Control Protocol Server for RuTwin",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Add CORS middleware
@@ -21,14 +44,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files
+static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+print(f"Static directory: {static_dir}")  # Debug print
+os.makedirs(static_dir, exist_ok=True)
+
+# Root endpoint to serve the frontend
+@app.get("/")
+async def root():
+    index_path = os.path.join(static_dir, "index.html")
+    print(f"Serving index.html from: {index_path}")  # Debug print
+    if not os.path.exists(index_path):
+        raise HTTPException(status_code=404, detail=f"index.html not found at {index_path}")
+    return FileResponse(index_path)
+
+# Mount static files after the root endpoint
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
-# Import and include routers
-from .routes import tools_router, auth_router, config_router
-
+# Include routers
 app.include_router(tools_router, prefix="/api/v1/tools", tags=["tools"])
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(config_router, prefix="/api/v1/config", tags=["config"])
@@ -47,17 +85,9 @@ async def general_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={
             "error": True,
-            "message": "An unexpected error occurred.",  # Generic message for production
-            "detail": str(exc),  # Optionally include for debugging, but consider removing for prod
+            "message": "An unexpected error occurred.",
+            "detail": str(exc),
         },
     )
 
-@app.on_event("startup")
-async def startup_event():
-    # Create an instance of MCPServer
-    mcp_server_instance = MCPServer()
-
-    # Store the MCPServer instance in the application state
-    app.state.mcp_server = mcp_server_instance
-
-__all__ = ['MCPServer']
+__all__ = ['MCPServer', 'app']

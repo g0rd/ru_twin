@@ -4,12 +4,15 @@ import yaml
 import os
 from pathlib import Path
 from .routes import tools_router, auth_router, config_router
-from ..tools.google import (
+from ru_twin.mcp.utils.google import (
     GmailSendTool, GmailReadTool, GmailDraftTool, GmailLabelsTool, GmailSearchTool,
     SheetsReadTool, SheetsWriteTool, SheetsFormatTool, SheetsCreateTool, SheetsShareTool, SheetsFormulasTool,
     DocsCreateTool, DocsEditTool, DocsFormatTool, DocsInsertTool, DocsExportTool, DocsShareTool
 )
 from pydantic import BaseModel
+import logging
+
+logger = logging.getLogger(__name__)
 
 class MCPServer:
     """Message Control Protocol Server implementation."""
@@ -37,47 +40,70 @@ class MCPServer:
         
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load server configuration from YAML file."""
-        with open(config_path, 'r') as f:
-            return yaml.safe_load(f)
+        try:
+            with open(config_path, 'r') as f:
+                return yaml.safe_load(f)
+        except Exception as e:
+            logger.error(f"Error loading config from {config_path}: {str(e)}")
+            return {
+                "server_config": {
+                    "auth": {
+                        "enabled": False
+                    }
+                }
+            }
     
     def _register_google_tools(self):
         """Register all Google tools with the server."""
-        # Gmail tools
-        self.register_tool(GmailSendTool())
-        self.register_tool(GmailReadTool())
-        self.register_tool(GmailDraftTool())
-        self.register_tool(GmailLabelsTool())
-        self.register_tool(GmailSearchTool())
-        
-        # Google Sheets tools
-        self.register_tool(SheetsReadTool())
-        self.register_tool(SheetsWriteTool())
-        self.register_tool(SheetsFormatTool())
-        self.register_tool(SheetsCreateTool())
-        self.register_tool(SheetsShareTool())
-        self.register_tool(SheetsFormulasTool())
-        
-        # Google Docs tools
-        self.register_tool(DocsCreateTool())
-        self.register_tool(DocsEditTool())
-        self.register_tool(DocsFormatTool())
-        self.register_tool(DocsInsertTool())
-        self.register_tool(DocsExportTool())
-        self.register_tool(DocsShareTool())
+        try:
+            # Gmail tools
+            self.register_tool(GmailSendTool())
+            self.register_tool(GmailReadTool())
+            self.register_tool(GmailDraftTool())
+            self.register_tool(GmailLabelsTool())
+            self.register_tool(GmailSearchTool())
+            
+            # Google Sheets tools
+            self.register_tool(SheetsReadTool())
+            self.register_tool(SheetsWriteTool())
+            self.register_tool(SheetsFormatTool())
+            self.register_tool(SheetsCreateTool())
+            self.register_tool(SheetsShareTool())
+            self.register_tool(SheetsFormulasTool())
+            
+            # Google Docs tools
+            self.register_tool(DocsCreateTool())
+            self.register_tool(DocsEditTool())
+            self.register_tool(DocsFormatTool())
+            self.register_tool(DocsInsertTool())
+            self.register_tool(DocsExportTool())
+            self.register_tool(DocsShareTool())
+        except Exception as e:
+            logger.error(f"Error registering Google tools: {str(e)}")
         
     def register_tool(self, tool):
         """Register a new tool with the MCP server."""
-        self._tools[tool.name] = {
-            "description": tool.description,
-            "input_schema": tool.input_schema
-        }
+        try:
+            self._tools[tool.name] = {
+                "description": tool.description,
+                "input_schema": tool.input_schema
+            }
+            logger.info(f"Registered tool: {tool.name}")
+        except Exception as e:
+            logger.error(f"Error registering tool {getattr(tool, 'name', 'unknown')}: {str(e)}")
+            raise
         
     def register_agent(self, agent):
         """Register a new agent with the MCP server."""
-        self._agents[agent.name] = {
-            "capabilities": agent.capabilities
-        }
-        
+        try:
+            self._agents[agent.name] = {
+                "capabilities": agent.capabilities
+            }
+            logger.info(f"Registered agent: {agent.name}")
+        except Exception as e:
+            logger.error(f"Error registering agent {getattr(agent, 'name', 'unknown')}: {str(e)}")
+            raise
+
     def get_app(self):
         """Get the FastAPI application instance."""
         return self.app 
@@ -102,10 +128,10 @@ class MCPServer:
         # Implement actual tool invocation logic here
         return {"status": "invoked", "tool": tool_name, "agent": agent}
     
-    def validate_authorization(self, auth_header: str) -> bool:
-        """Validate authorization header."""
-        # Implement actual authorization logic here
-        return True
+    def validate_authorization(self, auth_token: str) -> bool:
+        """Validate an authorization token."""
+        # Implement your authorization logic here
+        return True  # For now, always return True
 
     def register_tool(self, tool_data: Any) -> None:
         """Register a new tool."""

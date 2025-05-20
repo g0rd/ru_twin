@@ -9,24 +9,33 @@ This module initializes the RuTwin Crew system, including:
 - OpenTelemetry and Arize Phoenix observability
 """
 
+# Standard library imports
 import argparse
 import asyncio
 import json
 import logging
 import os
 import sys
+import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-from contextlib import asynccontextmanager
 
-import yaml
-from dotenv import load_dotenv
-from fastapi import FastAPI, Request, BackgroundTasks
-from fastapi.responses import JSONResponse
+# Third-party imports
 import structlog
 import uvicorn
+import yaml
+from anthropic import Anthropic
+from dotenv import load_dotenv
+from fastapi import FastAPI, Request, BackgroundTasks, HTTPException
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 import phoenix as px
-import uuid
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.asyncio import AsyncioIntegration
+from fastapi.middleware.cors import CORSMiddleware
+import inspect
 
 # OpenTelemetry imports
 from opentelemetry import trace, metrics
@@ -40,75 +49,148 @@ from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExp
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.trace import Status, StatusCode
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+from opentelemetry.sdk.trace.sampling import ParentBased, ALWAYS_ON
+from grpc import StatusCode as GrpcStatusCode
 
+# OpenInference imports
 from openinference.instrumentation import using_session
 from openinference.semconv.trace import SpanAttributes
 from openinference.instrumentation.crewai import CrewAIInstrumentor
 from openinference.instrumentation.litellm import LiteLLMInstrumentor
+
+# CrewAI imports
 from crewai_tools import SerperDevTool
 
-# RuTwin imports
+# Local imports
 from ru_twin.crew import create_crew
 from ru_twin.a2a import AgentMessenger
 from ru_twin.third_party_gateway import ThirdPartyAgentGateway
 from ru_twin.tools.tool_registry import ToolRegistry
-
-# Import tool registration functions
 from ru_twin.tools.shopify_tools import register_tools as register_shopify_tools
 from ru_twin.tools.teller_tools import register_tools as register_teller_tools
-
-# Import MCP clients
-from ru_twin.mcp.tools.shopify import ShopifyClient
-from ru_twin.mcp.tools.teller import TellerClient
-
-# Import MCP Client base class
+from ru_twin.tools.shopify_tools import ShopifyClient
+from ru_twin.tools.teller_tools import TellerClient
 from ru_twin.mcp.client import MCPClient
-from ru_twin.mcp.session import ClientSession
-from ru_twin.mcp.sse import sse_client
+from ru_twin.mcp.client.enhanced_session import EnhancedMCPSession
+from ru_twin.mcp.client.sse import sse_client
+from ru_twin.teller_webhook_handler import TellerWebhookHandler
+from ru_twin.mcp.server.webhooks import teller_router
+from ru_twin.mcp.server.routes import tools_router, auth_router, config_router
+from ru_twin.mcp.server.server import MCPServer
 
-# Anthropic import
-from anthropic import Anthropic
+
 
 def init_opentelemetry() -> TracerProvider:
     """Initialize OpenTelemetry for tracing and metrics."""
-    # Get OTLP endpoint from environment or use default Phoenix endpoint
-    
-    session = px.launch_app().view()
-    tracer_provider = register(endpoint="http://localhost:6006/v1/traces")
-    CrewAIInstrumentor().instrument(skip_dep_check=True, tracer_provider=tracer_provider)
-    LiteLLMInstrumentor().instrument(tracer_provider=tracer_provider)
 
-    otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://phoenix:4317")
-    service_name = os.getenv("OTEL_SERVICE_NAME", "ru_twin")
-    
-    # Create a resource to identify the service
-    resource = Resource.create({"service.name": service_name})
-    
-    # Create OTLP exporter for traces
-    otlp_span_exporter = OTLPSpanExporter(endpoint=otlp_endpoint)
-    
-    # Add span processor to the tracer provider
-    tracer_provider.add_span_processor(BatchSpanProcessor(otlp_span_exporter))
-    
-    # Set the global tracer provider
-    if not isinstance(trace.get_tracer_provider(), TracerProvider) or isinstance(trace.get_tracer_provider(), trace.NoOpTracerProvider):
-        trace.set_tracer_provider(tracer_provider)
-    
-    # Initialize MeterProvider with the resource
-    metric_reader = PeriodicExportingMetricReader(
-        OTLPMetricExporter(endpoint=otlp_endpoint)
-    )
-    meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-    
-    # Set the global meter provider
-    if not isinstance(metrics.get_meter_provider(), MeterProvider) or isinstance(metrics.get_meter_provider(), metrics.NoOpMeterProvider):
-        metrics.set_meter_provider(meter_provider)
-    
-    logger.info("OpenTelemetry initialized", 
-                otlp_endpoint=otlp_endpoint, 
-                service_name=service_name)
-    
-    return tracer_provider
+    try:
+        # Get OTLP endpoint from environment or use default Phoenix endpoint
+        otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+        service_name = os.getenv("OTEL_SERVICE_NAME", "ru_twin")
+        
+        # Create a resource to identify the service
+        resource = Resource.create({"service.name": service_name})
+        
+        # grpc_retry_config = (
+        #     "grpc.service_config",
+        #     """{
+        #         "methodConfig": [{
+        #             "name": [{"service": "opentelemetry.proto.collector.trace.v1.TraceService"}],
+        #             "retryPolicy": {
+        #                 "maxAttempts": 3,
+        #                 "initialBackoff": "1s",
+        #                 "maxBackoff": "5s",
+        #                 "backoffMultiplier": 1.5,
+        #                 "retryableStatusCodes": ["UNAVAILABLE", "DEADLINE_EXCEEDED"]
+        #             }
+        #         },
+        #         {
+        #             "name": [{"service": "opentelemetry.proto.collector.metrics.v1.MetricsService"}],
+        #             "retryPolicy": {
+        #                 "maxAttempts": 3,
+        #                 "initialBackoff": "1s",
+        #                 "maxBackoff": "5s",
+        #                 "backoffMultiplier": 1.5,
+        #                 "retryableStatusCodes": ["UNAVAILABLE", "DEADLINE_EXCEEDED"]
+        #             }
+        #         }]
+        #     }"""
+        # )
+        # Create OTLP exporter for traces with retry configuration
+        otlp_span_exporter = OTLPSpanExporter(
+            endpoint=otlp_endpoint,
+            insecure=True,  # Use insecure connection for local development
+            timeout=5  # 5 second timeout
+        )
+        
+        # Create OTLP exporter for metrics with retry configuration
+        otlp_metric_exporter = OTLPMetricExporter(
+            endpoint=otlp_endpoint,
+            insecure=True,  # Use insecure connection for local development
+            timeout=5 # 5 second timeout
+        )
+        
+        # Create tracer provider with batch span processor
+        tracer_provider = TracerProvider(
+            resource=resource,
+            sampler=ParentBased(ALWAYS_ON)
+        )
+        
+        # Add span processor to the tracer provider with retry configuration
+        tracer_provider.add_span_processor(
+            BatchSpanProcessor(
+                otlp_span_exporter,
+                max_queue_size=2048,
+                schedule_delay_millis=5000,  # 5 seconds
+                max_export_batch_size=512
+            )
+        )
+        
+        # Only set the global tracer provider if it hasn't been set yet
+        current_provider = trace.get_tracer_provider()
+        if isinstance(current_provider, trace.NoOpTracerProvider):
+            trace.set_tracer_provider(tracer_provider)
+        
+        # Initialize MeterProvider with the resource and retry configuration
+        metric_reader = PeriodicExportingMetricReader(
+            exporter=otlp_metric_exporter,
+            export_interval_millis=60000,  # Export every minute
+            export_timeout_millis=30000,   # 30 second timeout
+        )
+        
+        meter_provider = MeterProvider(
+            resource=resource,
+            metric_readers=[metric_reader]
+        )
+        
+        # Only set the global meter provider if it hasn't been set yet
+        current_meter_provider = metrics.get_meter_provider()
+        if isinstance(current_meter_provider, metrics.NoOpMeterProvider):
+            metrics.set_meter_provider(meter_provider)
+        
+        logger.info(
+            "OpenTelemetry initialized",
+            otlp_endpoint=otlp_endpoint,
+            service_name=service_name
+        )
+        
+        return tracer_provider
+        
+    except Exception as e:
+        logger.warning(
+            "Failed to initialize OpenTelemetry, falling back to NoOp providers",
+            error=str(e)
+        )
+        # Fall back to NoOp providers only if they haven't been set yet
+        current_provider = trace.get_tracer_provider()
+        if isinstance(current_provider, trace.NoOpTracerProvider):
+            trace.set_tracer_provider(trace.NoOpTracerProvider())
+            
+        current_meter_provider = metrics.get_meter_provider()
+        if isinstance(current_meter_provider, metrics.NoOpMeterProvider):
+            metrics.set_meter_provider(metrics.NoOpMeterProvider())
+            
+        return trace.get_tracer_provider()
 
 # Configure logging
 structlog.configure(
@@ -169,68 +251,53 @@ def init_a2a_messenger(registry: ToolRegistry) -> AgentMessenger:
     """Initialize the Agent-to-Agent messenger."""
     return AgentMessenger(agent_registry=registry)
 
-async def init_mcp_clients() -> Dict[str, MCPClient]:
+async def init_mcp_clients() -> Dict[str, Dict]:
     """Initialize MCP clients for external services."""
     clients = {}
     tracer = trace.get_tracer("ru_twin_mcp")
     
     with tracer.start_as_current_span("init_mcp_clients") as span:
-        # Initialize configuration for MCP clients
-        mcp_server_url = os.getenv("MCP_SERVER_URL", "http://localhost:8080/events")
-        
-        # Initialize Financial MCP client
-        finance_client = MCPClient(name="finance_client")
         try:
-            await finance_client.connect_to_sse_server(server_url=f"{mcp_server_url}/finance")
-            clients["finance"] = finance_client
-            span.set_attribute("finance_client_initialized", True)
-            logger.info("Finance MCP client initialized")
+            # Initialize Shopify client if credentials are available
+            shopify_shop_url = os.getenv("SHOPIFY_SHOP_URL")
+            shopify_access_token = os.getenv("SHOPIFY_ACCESS_TOKEN")
+            shopify_api_version = os.getenv("SHOPIFY_API_VERSION", "2025-04")
+            
+            if shopify_shop_url and shopify_access_token:
+                clients["shopify"] = {
+                    "class": ShopifyClient,
+                    "config": {
+                        "shop_url": shopify_shop_url,
+                        "access_token": shopify_access_token,
+                        "api_version": shopify_api_version,
+                        "gateway": third_party_gateway
+                    }
+                }
+                span.set_attribute("shopify_client_initialized", True)
+                logger.info("Shopify client configuration initialized")
+            
+            # Initialize Teller client if credentials are available
+            teller_access_token = os.getenv("TELLER_ACCESS_TOKEN")
+            teller_environment = os.getenv("TELLER_ENVIRONMENT", "sandbox")
+            
+            if teller_access_token:
+                clients["teller"] = {
+                    "class": TellerClient,
+                    "config": {
+                        "access_token": teller_access_token,
+                        "environment": teller_environment,
+                        "gateway": third_party_gateway
+                    }
+                }
+                span.set_attribute("teller_client_initialized", True)
+                logger.info("Teller client configuration initialized")
+            
+            span.set_status(Status(StatusCode.OK))
+            return clients
         except Exception as e:
             span.record_exception(e)
-            logger.error(f"Failed to initialize Finance MCP client: {e}")
-        
-        # Initialize E-commerce MCP client
-        ecommerce_client = MCPClient(name="ecommerce_client")
-        try:
-            await ecommerce_client.connect_to_sse_server(server_url=f"{mcp_server_url}/ecommerce")
-            clients["ecommerce"] = ecommerce_client
-            span.set_attribute("ecommerce_client_initialized", True)
-            logger.info("E-commerce MCP client initialized")
-        except Exception as e:
-            span.record_exception(e)
-            logger.error(f"Failed to initialize E-commerce MCP client: {e}")
-        
-        # Initialize Shopify client if credentials are available
-        shopify_shop_url = os.getenv("SHOPIFY_SHOP_URL")
-        shopify_access_token = os.getenv("SHOPIFY_ACCESS_TOKEN")
-        shopify_api_version = os.getenv("SHOPIFY_API_VERSION", "2025-04")
-        
-        if shopify_shop_url and shopify_access_token:
-            clients["shopify"] = ShopifyClient(
-                shop_url=shopify_shop_url,
-                access_token=shopify_access_token,
-                api_version=shopify_api_version,
-                gateway=third_party_gateway
-            )
-            span.set_attribute("shopify_client_initialized", True)
-            logger.info("Shopify client initialized")
-        
-        # Initialize Teller client if credentials are available
-        teller_access_token = os.getenv("TELLER_ACCESS_TOKEN")
-        teller_environment = os.getenv("TELLER_ENVIRONMENT", "sandbox")
-        
-        if teller_access_token:
-            clients["teller"] = TellerClient(
-                access_token=teller_access_token,
-                environment=teller_environment,
-                gateway=third_party_gateway
-            )
-            span.set_attribute("teller_client_initialized", True)
-            logger.info("Teller client initialized")
-        
-        span.set_status(Status(StatusCode.OK))
-        
-    return clients
+            span.set_status(Status(StatusCode.ERROR, str(e)))
+            raise
 
 async def cleanup_mcp_clients():
     """Clean up all MCP clients properly."""
@@ -324,9 +391,30 @@ def run_crew(task_name: str, config_dir: str = "src/ru_twin/config") -> Any:
     """
     return asyncio.run(run_crew_async(task_name, config_dir))
 
+# Initialize Sentry SDK
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    environment=os.getenv("ENVIRONMENT", "development"),
+    traces_sample_rate=1.0,  # Adjust in production; 1.0 = 100% sampling
+    profiles_sample_rate=1.0,  # Enables performance profiling
+    integrations=[
+        FastApiIntegration(),
+        AsyncioIntegration(),
+    ],
+)
+
+# Initialize Teller webhook handler
+teller_handler = TellerWebhookHandler(
+    app_id=os.getenv("TELLER_APP_ID"),
+    signing_key=os.getenv("TELLER_SIGNING_KEY")
+)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan context manager for FastAPI application startup and shutdown."""
+    """
+    Lifespan context manager for FastAPI application startup and shutdown.
+    Handles initialization and cleanup of the Teller webhook handler.
+    """
     global tool_registry, third_party_gateway, a2a_messenger, mcp_clients
     
     # Initialize OpenTelemetry
@@ -340,6 +428,35 @@ async def lifespan(app: FastAPI):
     # Initialize MCP clients
     mcp_clients = await init_mcp_clients()
     
+    # Initialize MCP server
+    mcp_server = MCPServer()
+    app.state.mcp_server = mcp_server
+    
+    # Initialize Teller webhook
+    @teller_handler.register_handler("enrollment.disconnected")
+    async def handle_enrollment_disconnected(payload):
+        enrollment_id = payload["payload"]["enrollment_id"]
+        reason = payload["payload"]["reason"]
+        print(f"Enrollment {enrollment_id} disconnected. Reason: {reason}")
+        return {"enrollment_id": enrollment_id, "reason": reason}
+
+    @teller_handler.register_handler("transactions.processed")
+    async def handle_transactions_processed(payload):
+        transactions = payload["payload"]["transactions"]
+        print(f"Processed {len(transactions)} transactions")
+        return {"transaction_count": len(transactions)}
+
+    @teller_handler.register_handler("account.number_verification.processed")
+    async def handle_account_verification(payload):
+        account_id = payload["payload"]["account_id"]
+        status = payload["payload"]["status"]
+        print(f"Account {account_id} verification status: {status}")
+        return {"account_id": account_id, "status": status}
+
+    @app.post("/webhook/teller")
+    async def webhook_endpoint(request: Request):
+        return await teller_handler.handle_webhook(request)
+    
     logger.info("Application startup complete")
     
     yield
@@ -348,6 +465,8 @@ async def lifespan(app: FastAPI):
     await cleanup_mcp_clients()
     
     logger.info("Application shutdown complete")
+    # Flush any pending Sentry events
+    sentry_sdk.flush()
 
 # Initialize FastAPI app with lifespan
 app = FastAPI(
@@ -357,6 +476,51 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permissive setting - review for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount static files
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+print(f"Static directory: {static_dir}")  # Debug print
+os.makedirs(static_dir, exist_ok=True)
+
+# Root endpoint to serve the frontend
+@app.get("/")
+async def root():
+    index_path = os.path.join(static_dir, "index.html")
+    print(f"Serving index.html from: {index_path}")  # Debug print
+    if not os.path.exists(index_path):
+        raise HTTPException(status_code=404, detail=f"index.html not found at {index_path}")
+    return FileResponse(index_path)
+
+# Mount static files after the root endpoint
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# Initialize MCP server first
+mcp_server = MCPServer()
+app.state.mcp_server = mcp_server
+
+# Include all routers
+app.include_router(teller_router)
+app.include_router(tools_router, prefix="/api/v1/tools", tags=["tools"])
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(config_router, prefix="/api/v1/config", tags=["config"])
+
+# Add error handlers
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=exc)
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "message": str(exc)}
+    )
+
 # Instrument the FastAPI app right after creation
 FastAPIInstrumentor.instrument_app(app)
 logger.info("FastAPI app instrumented with OpenTelemetry")
@@ -364,11 +528,38 @@ logger.info("FastAPI app instrumented with OpenTelemetry")
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy"}
+    try:
+        # Check if MCP server is initialized
+        if not hasattr(app.state, 'mcp_server'):
+            return JSONResponse(
+                status_code=503,
+                content={"status": "error", "message": "MCP server not initialized"}
+            )
+        return {"status": "healthy"}
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}", exc_info=e)
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "message": str(e)}
+        )
 
-@app.post("/run_task/{task_name}")
+@app.get("/run_task/{task_name}")
+async def run_task_get(task_name: str):
+    """GET endpoint to run a specific task."""
+    try:
+        # Run the task asynchronously
+        result = await run_crew_async(task_name)
+        return {"task": task_name, "status": "completed", "result": result}
+    except Exception as e:
+        logger.exception(f"Error running task {task_name}", exc_info=e)
+        return JSONResponse(
+            status_code=500,
+            content={"task": task_name, "status": "failed", "error": str(e)}
+        )
+
+@app.get("/run_task/{task_name}")
 async def run_task_endpoint(task_name: str, request: Request, background_tasks: BackgroundTasks):
-    """API endpoint to run a specific task."""
+    """POST endpoint to run a specific task."""
     try:
         # Run the task asynchronously to not block the API response
         result = await run_crew_async(task_name)
@@ -380,7 +571,7 @@ async def run_task_endpoint(task_name: str, request: Request, background_tasks: 
             content={"task": task_name, "status": "failed", "error": str(e)}
         )
 
-@app.post("/mcp/{client_name}/call_tool")
+@app.get("/mcp/{client_name}/call_tool")
 async def call_mcp_tool(client_name: str, request: Request):
     """API endpoint to call a specific tool on an MCP client."""
     try:
@@ -456,7 +647,7 @@ async def list_mcp_tools(client_name: str):
             content={"status": "failed", "error": str(e)}
         )
 
-@app.post("/chat/{client_name}")
+@app.get("/chat/{client_name}")
 async def chat_with_mcp(client_name: str, request: Request):
     """API endpoint to have a single chat interaction with an MCP client."""
     try:
@@ -492,7 +683,7 @@ async def chat_with_mcp(client_name: str, request: Request):
                 })
                 
                 # Get available tools
-                response = await client.session.list_tools()
+                response = await client.mcp_session.list_tools()
                 available_tools = [{ 
                     "name": tool.name,
                     "description": tool.description,
@@ -711,7 +902,9 @@ async def process_natural_language_request(message: str, tracer) -> JSONResponse
                 return JSONResponse(
                     status_code=500,
                     content={"status": "failed", "error": "Could not determine intent from message"}
-                )@app.post("/api")
+                )
+            
+@app.post("/api")
 async def unified_api_endpoint(request: Request):
     """
     Unified API endpoint that consolidates all RuTwin functionality.
@@ -841,12 +1034,24 @@ async def unified_api_endpoint(request: Request):
                         content={"status": "failed", "error": f"MCP client '{client_name}' not found"}
                     )
                 
-                client = mcp_clients[client_name]
+                # Get the client configuration
+                client_config = mcp_clients[client_name]
                 
                 # Only call on MCPClient instances
-                if isinstance(client, MCPClient):
-                    tool_names = await client.get_current_tool_names()
-                    return {"action": action, "status": "success", "tools": tool_names}
+                if isinstance(client_config, dict) and "config" in client_config:
+                    # Create a new client instance within the async context manager
+                    client_class = client_config["class"]
+                    client_config = client_config["config"]
+                    
+                    # Create and initialize the client
+                    client = client_class(**client_config)
+                    await client.initialize()
+                    
+                    try:
+                        tool_names = await client.get_current_tool_names()
+                        return {"action": action, "status": "success", "tools": tool_names}
+                    finally:
+                        await client.cleanup()
                 else:
                     return JSONResponse(
                         status_code=400,

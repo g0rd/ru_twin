@@ -4,8 +4,8 @@ from typing import Dict, Callable, Any, Optional
 
 from pydantic import BaseModel
 
-from ru_twin.mcp.tools.shopify import ShopifyClient
-from ru_twin.mcp.tools.teller import TellerClient
+from ru_twin.mcp.client.shopify_client import ShopifyClient
+from ru_twin.mcp.client.teller_client import TellerClient
 
 
 class ToolRegistry:

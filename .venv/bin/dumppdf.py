@@ -1,4 +1,4 @@
-#!/Users/rutwijdevashrayee/Desktop/Projects/ru_twin/.venv/bin/python
+#!/Users/rutwijdevashrayee/Desktop/Projects/ru_twin/.venv/bin/python3
 """Extract pdf structure in XML format"""
 
 import logging

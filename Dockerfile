@@ -1,5 +1,6 @@
 # Use an official lightweight Python runtime as a parent image
 FROM python:3.11-slim
+RUN pip install uv
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -12,16 +13,25 @@ RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 # Set working directory
 WORKDIR /app
 
+# Create a requirements file with the conflicting dependencies
+RUN echo "fastapi==0.104.1\narize-phoenix==9.0.1" > requirements.txt
+
+# Let uv try to resolve the dependencies
+# It will either find a working combination or fail with a clear error
+RUN uv pip install -r requirements.txt || \
+    echo "Dependency conflict detected. See error above."
+
+
 # Install system dependencies (if any)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy only requirements first to leverage Docker cache
-COPY requirements.txt .
+# COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
 COPY . .

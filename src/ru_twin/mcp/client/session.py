@@ -1,45 +1,89 @@
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel
+"""MCP Client Session implementation."""
 
-class Tool(BaseModel):
-    name: str
-    description: str
-    inputSchema: Dict[str, Any]
+from typing import Any, Dict, List, Optional, AsyncIterator, AsyncContextManager
+import asyncio
+import json
+import logging
+from contextlib import asynccontextmanager
 
-class ToolResponse(BaseModel):
-    content: List[Dict[str, Any]]
+logger = logging.getLogger(__name__)
 
-class ClientSession:
-    def __init__(self, input_stream, output_stream):
-        self.input_stream = input_stream
-        self.output_stream = output_stream
+
+class ClientSession(AsyncContextManager['ClientSession']):
+    """MCP Client Session for managing connections and tool execution."""
+    
+    def __init__(self, *args, **kwargs):
+        """Initialize the client session."""
         self._initialized = False
-
-    async def initialize(self):
+        self._closed = False
+        self._lock = asyncio.Lock()
+        
+    async def __aenter__(self) -> 'ClientSession':
+        """Enter the async context manager."""
+        await self.initialize()
+        return self
+        
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Exit the async context manager and clean up resources."""
+        await self.close()
+        
+    async def initialize(self) -> None:
         """Initialize the session."""
-        if not self._initialized:
-            await self.output_stream.send({"type": "initialize"})
-            response = await self.input_stream.receive()
-            if response.get("type") != "initialized":
-                raise Exception("Failed to initialize session")
+        if self._initialized:
+            return
+            
+        async with self._lock:
+            if self._initialized:  # Double-checked locking pattern
+                return
+                
+            # Perform any initialization here
             self._initialized = True
-
-    async def list_tools(self) -> List[Tool]:
-        """List available tools."""
-        await self.output_stream.send({"type": "list_tools"})
-        response = await self.input_stream.receive()
-        if response.get("type") != "tools_list":
-            raise Exception("Failed to list tools")
-        return [Tool(**tool) for tool in response.get("tools", [])]
-
-    async def call_tool(self, tool_name: str, args: Dict[str, Any]) -> ToolResponse:
-        """Call a tool with the given arguments."""
-        await self.output_stream.send({
-            "type": "call_tool",
-            "tool": tool_name,
-            "args": args
-        })
-        response = await self.input_stream.receive()
-        if response.get("type") != "tool_result":
-            raise Exception("Failed to call tool")
-        return ToolResponse(content=response.get("content", [])) 
+            logger.info("MCP ClientSession initialized")
+    
+    async def close(self) -> None:
+        """Close the session and release resources."""
+        if self._closed:
+            return
+            
+        async with self._lock:
+            if self._closed:  # Double-checked locking pattern
+                return
+                
+            # Perform any cleanup here
+            self._closed = True
+            self._initialized = False
+            logger.info("MCP ClientSession closed")
+    
+    async def list_tools(self) -> List[Dict[str, Any]]:
+        """List all available tools.
+        
+        Returns:
+            List of tool definitions
+        """
+        raise NotImplementedError("list_tools must be implemented by subclasses")
+    
+    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+        """Call a tool with the given arguments.
+        
+        Args:
+            tool_name: Name of the tool to call
+            arguments: Arguments to pass to the tool
+            
+        Returns:
+            The result of the tool call
+        """
+        raise NotImplementedError("call_tool must be implemented by subclasses")
+    
+    async def stream_tool(self, tool_name: str, arguments: Dict[str, Any]) -> AsyncIterator[Any]:
+        """Stream the results of a tool call.
+        
+        Args:
+            tool_name: Name of the tool to call
+            arguments: Arguments to pass to the tool
+            
+        Yields:
+            Chunks of the tool's output
+        """
+        # Default implementation just calls the tool and yields the result
+        result = await self.call_tool(tool_name, arguments)
+        yield result
